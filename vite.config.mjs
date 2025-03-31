@@ -42,7 +42,8 @@ export default defineConfig(({ mode }) => {
         //   replacement: path.join(process.cwd(), 'src/assets')
         // },
         '@tabler/icons-react': '@tabler/icons-react/dist/esm/icons/index.mjs'
-      }
+      },
+      extensions: ['.js', '.jsx'],
     },
     base: API_URL,
     plugins: [react(), jsconfigPaths()]
