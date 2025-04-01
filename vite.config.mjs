@@ -5,7 +5,7 @@ import jsconfigPaths from 'vite-jsconfig-paths';
 export default defineConfig(({ mode }) => {
   // depending on your application, base can also be "/"
   const env = loadEnv(mode, process.cwd(), '');
-  const API_URL = `${env.VITE_APP_BASE_NAME}`;
+  const API_URL = `${env.VITE_APP_BASE_NAME}` || '/energy-management-system';
   const PORT = 3000;
 
   return {
@@ -42,8 +42,7 @@ export default defineConfig(({ mode }) => {
         //   replacement: path.join(process.cwd(), 'src/assets')
         // },
         '@tabler/icons-react': '@tabler/icons-react/dist/esm/icons/index.mjs'
-      },
-      extensions: ['.js', '.jsx'],
+      }
     },
     base: API_URL,
     plugins: [react(), jsconfigPaths()]
