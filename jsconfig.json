@@ -18,6 +18,6 @@
         "baseUrl": "src"
     },
     "exclude": ["node_modules"],
-    "include": ["src", "**/*.js", "**/*.jsx", "src/**/*"],
+    "include": ["src", "**/*.js", "**/*.jsx", "src/**/*", "vite.config.mjs"],
     "references": [{ "path": "./jsconfig.node.json" }]
 }
