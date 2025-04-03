@@ -14,22 +14,46 @@ import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-
+import { supabase } from '../../../api/supabaseClient';
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
-
+import { useNavigate } from 'react-router-dom';
 // assets
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-
+import ErrorDialog from '../../../ui-component/ErrorDialog';
 // ===============================|| JWT - LOGIN ||=============================== //
 
 export default function AuthLogin() {
   const theme = useTheme();
-
+  const navigate = useNavigate();
   const [checked, setChecked] = useState(true);
 
   const [showPassword, setShowPassword] = useState(false);
+  // form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  // login handler
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setErrorDialogOpen(true);
+
+    } else {
+      // ✅ Navigate to home page or dashboard after login
+      navigate('/');
+    }
+  };
+
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
   };
@@ -42,7 +66,7 @@ export default function AuthLogin() {
     <>
       <FormControl fullWidth sx={{ ...theme.typography.customInput }}>
         <InputLabel htmlFor="outlined-adornment-email-login">Email Address / Username</InputLabel>
-        <OutlinedInput id="outlined-adornment-email-login" type="email" value="info@codedthemes.com" name="email" inputProps={{}} />
+        <OutlinedInput onChange={(e) => setEmail(e.target.value)} id="outlined-adornment-email-login" type="email" value="info@codedthemes.com" name="email" inputProps={{}} />
       </FormControl>
 
       <FormControl fullWidth sx={{ ...theme.typography.customInput }}>
@@ -52,6 +76,7 @@ export default function AuthLogin() {
           type={showPassword ? 'text' : 'password'}
           value="123456"
           name="password"
+          onChange={(e) => setPassword(e.target.value)}
           endAdornment={
             <InputAdornment position="end">
               <IconButton
@@ -85,11 +110,16 @@ export default function AuthLogin() {
       </Grid>
       <Box sx={{ mt: 2 }}>
         <AnimateButton>
-          <Button color="secondary" fullWidth size="large" type="submit" variant="contained">
+          <Button onClick={(e) => handleSubmit(e)} color="secondary" fullWidth size="large" type="submit" variant="contained">
             Sign In
           </Button>
         </AnimateButton>
       </Box>
+      <ErrorDialog
+        open={errorDialogOpen}
+        message={errorMsg}
+        onClose={() => setErrorDialogOpen(false)}
+      />
     </>
   );
 }

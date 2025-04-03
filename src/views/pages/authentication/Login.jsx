@@ -13,11 +13,14 @@ import AuthLogin from '../auth-forms/AuthLogin';
 
 import Logo from 'ui-component/Logo';
 import AuthFooter from 'ui-component/cards/AuthFooter';
-
+import { supabase } from '../../../api/supabaseClient';
+import { useState } from 'react';
 // ================================|| AUTH3 - LOGIN ||================================ //
 
 export default function Login() {
   const downMD = useMediaQuery((theme) => theme.breakpoints.down('md'));
+
+
 
   return (
     <AuthWrapper1>

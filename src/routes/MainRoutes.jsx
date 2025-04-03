@@ -1,19 +1,18 @@
 import { lazy } from 'react';
+import { Navigate } from 'react-router-dom';
 
-// project imports
 import MainLayout from 'layout/MainLayout';
 import Loadable from 'ui-component/Loadable';
+import PrivateRoute from './PrivateRoute';
 
-// dashboard routing
+// pages
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/Default')));
-
-// utilities routing
 const UtilsTypography = Loadable(lazy(() => import('views/utilities/Typography')));
 const UtilsColor = Loadable(lazy(() => import('views/utilities/Color')));
 const UtilsShadow = Loadable(lazy(() => import('views/utilities/Shadow')));
-
-// sample page routing
 const SamplePage = Loadable(lazy(() => import('views/sample-page')));
+const Login = Loadable(lazy(() => import('views/pages/authentication/Login')));
+const Register = Loadable(lazy(() => import('views/pages/authentication/Register')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -23,32 +22,63 @@ const MainRoutes = {
   children: [
     {
       path: '/',
-      element: <DashboardDefault />
+      element: (
+        <PrivateRoute>
+          <DashboardDefault />
+        </PrivateRoute>
+      )
     },
     {
-      path: 'dashboard',
-      children: [
-        {
-          path: 'default',
-          element: <DashboardDefault />
-        }
-      ]
+      path: 'dashboard/default',
+      element: (
+        <PrivateRoute>
+          <DashboardDefault />
+        </PrivateRoute>
+      )
     },
     {
       path: 'typography',
-      element: <UtilsTypography />
+      element: (
+        <PrivateRoute>
+          <UtilsTypography />
+        </PrivateRoute>
+      )
     },
     {
       path: 'color',
-      element: <UtilsColor />
+      element: (
+        <PrivateRoute>
+          <UtilsColor />
+        </PrivateRoute>
+      )
     },
     {
       path: 'shadow',
-      element: <UtilsShadow />
+      element: (
+        <PrivateRoute>
+          <UtilsShadow />
+        </PrivateRoute>
+      )
     },
     {
-      path: '/sample-page',
-      element: <SamplePage />
+      path: 'sample-page',
+      element: (
+        <PrivateRoute>
+          <SamplePage />
+        </PrivateRoute>
+      )
+    },
+    {
+      path: '/login',
+      element: <Login />
+    },
+    {
+      path: '/register',
+      element: <Register />
+    },
+    {
+      path: '*',
+      element: <Navigate to="/" />
     }
   ]
 };
