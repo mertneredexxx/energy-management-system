@@ -26,6 +26,10 @@ const MainRoutes = {
   element: <MainLayout />,
   children: [
     {
+      path: '/',
+      element: <Login />
+    },
+    {
       path: '/devices',
       element: (
         <PrivateRoute>
