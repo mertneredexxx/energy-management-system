@@ -39,7 +39,7 @@ export default function ProfileSection() {
       if (error || !user) return;
       // try to read a full_name or name from user_metadata, fallback to email
       const fullName =
-        user.user_metadata?.full_name ||
+        user.user_metadata?.first_name ||
         user.user_metadata?.name ||
         user.email ||
         '';
@@ -123,13 +123,7 @@ export default function ProfileSection() {
                       <Typography variant="h4">
                         Good Morning,
                       </Typography>
-                      <Typography
-                        component="span"
-                        variant="h4"
-                        sx={{ fontWeight: 400, ml: 1 }}
-                      >
                         {profile.fullName}
-                      </Typography>
                     </Box>
                     <Typography variant="subtitle2" color="textSecondary">
                       {profile.role}

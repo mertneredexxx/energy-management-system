@@ -50,7 +50,7 @@ export default function AuthLogin() {
 
     } else {
       // ✅ Navigate to home page or dashboard after login
-      navigate('/');
+      navigate('/devices');
     }
   };
 
