@@ -61,6 +61,25 @@ export default function AuthRegister() {
       setErrorOpen(true);
       setLoading(false);
     } else {
+
+      const userId = data.user.id;
+      const { error: evError } = await supabase
+        .from('ev_sessions')
+        .insert({
+          user_id:     userId,
+          charging_rate: 4,          // kW
+          plug_in_time:  '22:00',
+          plug_out_time: '08:00',
+          initial_soc:    35,        // %
+          final_soc:       5,        // 35%−30%
+          daily_usage:   200         // km/day (example)
+        });
+    
+      if (evError) {
+        console.error('Failed to create default EV session:', evError);
+        // you might want to show a warning here, but it shouldn't block signup
+      }
+      
       setLoading(false);
       navigate('/login');
     }
