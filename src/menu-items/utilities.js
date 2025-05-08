@@ -1,43 +1,58 @@
-// assets
-import { IconTypography, IconPalette, IconShadow, IconWindmill } from '@tabler/icons-react';
+import { 
+  IconTypography, 
+  IconPalette, 
+  IconShadow, 
+  IconWindmill,
+  IconChartBar,    // for graphs
+  IconDeviceLaptop, // for chosen devices (optional alternative)
+  IconHome         // for home settings (optional alternative)
+} from '@tabler/icons-react';
 
-// constant
 const icons = {
   IconTypography,
   IconPalette,
   IconShadow,
-  IconWindmill
+  IconWindmill,
+  IconChartBar,    // added icon for graphs
+  IconDeviceLaptop,
+  IconHome
 };
 
-// ==============================|| UTILITIES MENU ITEMS ||============================== //
-
 const utilities = {
-  id: 'utilities',
-  title: 'Utilities',
+  id: 'analyses',
+  title: 'Analyses',
   type: 'group',
   children: [
     {
-      id: 'util-typography',
-      title: 'Typography',
+      id: 'current-info',
+      title: 'Current Information',
       type: 'item',
-      url: '/typography',
-      icon: icons.IconTypography,
+      url: '/current-info',
+      icon: icons.IconDeviceLaptop,   // or you might try icons.IconDeviceLaptop
       breadcrumbs: false
     },
     {
-      id: 'util-color',
-      title: 'Color',
+      id: 'graphs',
+      title: 'Graphs',
       type: 'item',
-      url: '/color',
-      icon: icons.IconPalette,
+      url: '/graphs',
+      icon: icons.IconChartBar,  // using the suggested icon for graphs
       breadcrumbs: false
     },
     {
-      id: 'util-shadow',
-      title: 'Shadow',
+      id: 'selected-devices',
+      title: 'Loads',
       type: 'item',
-      url: '/shadow',
-      icon: icons.IconShadow,
+      url: '/loads',
+      icon: icons.IconDeviceLaptop,   // or you might try icons.IconDeviceLaptop
+      breadcrumbs: false
+    },
+    {
+      id: 'home-settings',
+      title: 'Home Settings',
+      type: 'item',
+      url: '/home-settings',
+      icon: icons.IconShadow,   // or consider icons.IconHome / icons.IconSettings
       breadcrumbs: false
     }
   ]

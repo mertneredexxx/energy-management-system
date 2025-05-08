@@ -66,7 +66,7 @@ export default function AuthLogin() {
     <>
       <FormControl fullWidth sx={{ ...theme.typography.customInput }}>
         <InputLabel htmlFor="outlined-adornment-email-login">Email Address / Username</InputLabel>
-        <OutlinedInput onChange={(e) => setEmail(e.target.value)} id="outlined-adornment-email-login" type="email" value="info@codedthemes.com" name="email" inputProps={{}} />
+        <OutlinedInput onChange={(e) => setEmail(e.target.value)} id="outlined-adornment-email-login" type="email" value={email} name="email" inputProps={{}} />
       </FormControl>
 
       <FormControl fullWidth sx={{ ...theme.typography.customInput }}>
@@ -74,7 +74,7 @@ export default function AuthLogin() {
         <OutlinedInput
           id="outlined-adornment-password-login"
           type={showPassword ? 'text' : 'password'}
-          value="123456"
+          value={password}
           name="password"
           onChange={(e) => setPassword(e.target.value)}
           endAdornment={

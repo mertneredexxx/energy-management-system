@@ -23,7 +23,7 @@ import { supabase } from '../../../api/supabaseClient';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
-
+import ErrorDialog from '../../../ui-component/ErrorDialog';
 // ===========================|| JWT - REGISTER ||=========================== //
 
 export default function AuthRegister() {
