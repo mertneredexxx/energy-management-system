@@ -44,6 +44,7 @@ export default function InfoPage() {
     const [totals, setTotals] = useState({ load: 0, prod: 0, net: 0 });
     const [snack, setSnack] = useState({ open: false, msg: '', sev: 'info' });
     const [preview, setPreview] = useState(null); // null or { series: [...], updates: [...] }
+    const [costs, setCosts] = useState({ before: 0, after: 0 });
 
     /* ---------- constants (edit if you wish) ---------- */
     const SUN_HOURS = 5.0;
@@ -51,14 +52,31 @@ export default function InfoPage() {
     const PR = 0.75;
     const GRID_LIMIT = 3;       // 3 kW apartment flat
 
+
+    const priceHr = Array.from({ length: 24 }, (_, h) =>
+        (h < 6 || h >= 22) ? 0.35 :   // off-peak
+            (h < 17) ? 0.90 :   // mid-peak
+                1.40     // peak
+    );
+
+
     /* ---------- helper to (de)apply a load to array ---- */
     const addLoad = (arr, load, sign = +1) => {
         const p = (load.power_rate / 1000) * sign;
+
+        if (load.is_all_day) {
+            // run 24h
+            for (let h = 0; h < 24; h++) arr[h] += p;
+            return;
+        }
+
+        // … your existing start/end parsing …
         let s = parseInt(load.start_time.slice(0, 2), 10);
         let e = parseInt(load.end_time.slice(0, 2), 10) || 24;
         if (e <= s) e += 24;
         for (let h = s; h < e; h++) arr[h % 24] += p;
     };
+
 
     /* ---------- load everything on mount --------------- */
     useEffect(() => { reload(); }, []);
@@ -75,16 +93,36 @@ export default function InfoPage() {
         const { data: loads = [] } = await supabase.from('loads').select('*').eq('user_id', user.id);
         let loadKwhTotal = 0;
         const loadTbl = loads.map(l => {
+            // 1) push into the 24-slot array
             addLoad(loadHourly, l, +1);
+
             const p = l.power_rate / 1000;
-            let s = parseInt(l.start_time.slice(0, 2), 10);
-            let e = parseInt(l.end_time.slice(0, 2), 10) || 24;
-            if (e <= s) e += 24;
-            const hrs = e - s;
+            // 2) override for all-day
+            const hrs = l.is_all_day
+                ? 24
+                : (() => {
+                    let s = parseInt(l.start_time.slice(0, 2), 10);
+                    let e = parseInt(l.end_time.slice(0, 2), 10) || 24;
+                    if (e <= s) e += 24;
+                    return e - s;
+                })();
             const kwh = p * hrs;
             loadKwhTotal += kwh;
-            return { id: l.id, name: l.device_name, power: p, hrs, kwh: kwh.toFixed(2), priority: l.priority, start_time: l.start_time, end_time: l.end_time, power_rate: l.power_rate };
+
+            return {
+                id: l.id,
+                name: l.device_name,
+                power: p,
+                hrs,
+                kwh: kwh.toFixed(2),
+                priority: l.priority,
+                start_time: l.start_time,
+                end_time: l.end_time,
+                power_rate: l.power_rate,
+                is_all_day: l.is_all_day        // carry the flag through
+            };
         });
+
 
         /* renewables */
         const { data: sels = [] } = await supabase
@@ -110,61 +148,62 @@ export default function InfoPage() {
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(1);
-        const BATT         = 52;                      // kWh capacity
-        const socStart     = (ev.initial_soc / 100) * BATT;
-        const MIN_SOC      = 0.25 * BATT;
-        const MAX_SOC      = 0.75 * BATT;
-        let soc            = socStart;
-        const evHr         = Array(24).fill(0);
-        
-        // a) grid only 22:00–06:00 at ev.charging_rate
-        for (let h=22; h<24; h++) {
-          const charge = Math.min(ev.charging_rate, MAX_SOC - soc);
-          evHr[h] = +charge.toFixed(2);
-          soc   += charge;
+
+        const BATT = 52;                     // kWh
+        let soc = (ev.initial_soc / 100) * BATT;
+        const MIN_SOC = 0.25 * BATT;
+        const MAX_SOC = 0.75 * BATT;
+        const evHr = Array(24).fill(0);
+
+        // a) grid-charging 22:00–06:00 @ ev.charging_rate
+        for (let h = 22; h < 24; h++) {
+            const c = Math.min(ev.charging_rate, MAX_SOC - soc);
+            evHr[h] = c; soc += c;
         }
-        for (let h=0; h<6; h++) {
-          const charge = Math.min(ev.charging_rate, MAX_SOC - soc);
-          evHr[h] = +charge.toFixed(2);
-          soc   += charge;
+        for (let h = 0; h < 6; h++) {
+            const c = Math.min(ev.charging_rate, MAX_SOC - soc);
+            evHr[h] = c; soc += c;
         }
-        
-        // b) renewable only 06:00–08:00
-        for (let h=6; h<8; h++) {
-          const spare  = Math.max(0, prodHourly[h] - loadHourly[h]);
-          const charge = Math.min(ev.charging_rate, spare, MAX_SOC - soc);
-          evHr[h] = +charge.toFixed(2);
-          soc   += charge;
+
+        // b) renewables-only charging 06:00–08:00
+        for (let h = 6; h < 8; h++) {
+            const spare = Math.max(0, prodHourly[h] - loadHourly[h]);
+            const c = Math.min(ev.charging_rate, spare, MAX_SOC - soc);
+            evHr[h] = c; soc += c;
         }
-        
-        // c) EV leaves home at 8h, SoC drops by 30%
+
+        // c) car leaves at 08:00 → SoC drops by 30%
         soc -= (ev.initial_soc - ev.final_soc) / 100 * BATT;
-        
-        // d) discharge 18:00–22:00 at 1 kW
-        for (let h=18; h<22; h++) {
-          const canDis = Math.min(1, soc - MIN_SOC);
-          evHr[h] = -canDis;
-          soc   -= canDis;
+
+        // d) discharge 18:00–22:00 @ 1 kW
+        for (let h = 18; h < 22; h++) {
+            const d = Math.min(1, soc - MIN_SOC);
+            evHr[h] = -d; soc -= d;
         }
 
-
-
-        // 1) incorporate EV into the load curve
+        // 1) merge EV into the load curve:
         for (let h = 0; h < 24; h++) {
             loadHourly[h] += evHr[h];
         }
 
-        // 2) optionally store EV in your chart data too:
+        // 2) include EV in your chart data:
         const baseSeries = loadHourly.map((l, i) => ({
             hour: `${String(i).padStart(2, '0')}:00`,
             Load: +l.toFixed(2),
-            EV: +evHr[i].toFixed(2),          // new
+            EV: +evHr[i].toFixed(2),           // ← here
             Production: +prodHourly[i].toFixed(2)
         }));
 
+        setHourSeries(baseSeries);
+        const costBefore = baseSeries.reduce(
+            (sum, { Load, Production, hour }) =>
+                sum + Math.max(Load - Production, 0) * priceHr[+hour.slice(0, 2)],
+            0
+        );
+
+        setCosts({ before: +costBefore.toFixed(2), after: +costBefore.toFixed(2) });
         setLoadRows(loadTbl);
         setProdRows(prodTbl);
-        setHourSeries(baseSeries);           // initial (no shifted yet)
         setTotals({
             load: loadKwhTotal.toFixed(2),
             prod: prodKwhTotal.toFixed(2),
@@ -183,108 +222,114 @@ export default function InfoPage() {
  * ≤ (Production + GRID_LIMIT). Updates the chart but does NOT
  * write to the database until “Apply Shift” is clicked.
  */
-async function runShifting() {
-    if (preview) return;  // already in preview
-  
-    // 1) Build capacity curve: Production[h] + GRID_LIMIT
-    const capacity = hourSeries.map(p =>
-        GRID_LIMIT + p.Production - Math.max(0, p.EV)
-      );
-      
-  
-    // 2) Base load curve (kW)
-    const baseLoad = hourSeries.map(p => p.Load);
-  
-    // 3) Quick exit if no peaks
-    if (baseLoad.every((kW, h) => kW <= capacity[h])) {
-      setSnack({ open: true, msg: 'No peaks – nothing to shift.', sev: 'info' });
-      return;
-    }
-  
-    // Helper: remove/add a load interval (start/end in hours, power_rate in W)
-    const addInterval = (arr, { power_rate, start, end }, sign) => {
-      const p = (power_rate / 1000) * sign; // to kW
-      let s = start, e = end;
-      if (e <= s) e += 24;                  // wrap midnight
-      for (let h = s; h < e; h++) arr[h % 24] += p;
-    };
-  
-    // Helper: compute duration hours from time strings
-    const findDuration = (start, end) => {
-      let s = parseInt(start.slice(0,2),10);
-      let e = parseInt(end  .slice(0,2),10) || 24;
-      return e <= s ? e + 24 - s : e - s;
-    };
-  
-    // 4) Prepare mutable arrays
-    const shiftedLoadHr = [...baseLoad];
-    const updates       = [];
-    let movedCount      = 0;
-  
-    // 5) Sort flexible loads by priority desc, then power desc
-    const flexLoads = [...loadRows]
-      .filter(l => l.priority > 1)
-      .sort((a,b) => b.priority - a.priority || b.power - a.power);
-  
-    // 6) Greedy placement loop
-    for (const l of flexLoads) {
-      // Remove original
-      addInterval(
-        shiftedLoadHr,
-        {
-          power_rate: l.power_rate,
-          start: parseInt(l.start_time.slice(0,2),10),
-          end:   parseInt(l.end_time  .slice(0,2),10) || 24
-        },
-        -1
-      );
-  
-      const duration = findDuration(l.start_time, l.end_time);
-      const p_kW     = l.power;
-  
-      // Try every possible start hour 0–23
-      for (let tryStart = 0; tryStart < 24; tryStart++) {
-        let fits = true;
-        for (let h = 0; h < duration; h++) {
-          const idx = (tryStart + h) % 24;
-          if (shiftedLoadHr[idx] + p_kW > capacity[idx]) { fits = false; break; }
-        }
-        if (!fits) continue;
-  
-        // Found a slot—add it back
-        addInterval(
-          shiftedLoadHr,
-          { power_rate: l.power_rate, start: tryStart, end: (tryStart + duration) % 24 },
-          +1
+    async function runShifting() {
+        if (preview) return;  // already in preview
+
+        // 1) Build capacity curve: Production[h] + GRID_LIMIT
+        const capacity = hourSeries.map(p =>
+            GRID_LIMIT + p.Production - Math.max(0, p.EV)
         );
-  
-        // Record update for “Apply Shift”
-        updates.push({
-          id   : l.id,
-          start: `${String(tryStart).padStart(2,'0')}:00`,
-          end  : `${String((tryStart + duration) % 24).padStart(2,'0')}:00`
+
+
+        // 2) Base load curve (kW)
+        const baseLoad = hourSeries.map(p => p.Load);
+
+        // 3) Quick exit if no peaks
+        if (baseLoad.every((kW, h) => kW <= capacity[h])) {
+            setSnack({ open: true, msg: 'No peaks – nothing to shift.', sev: 'info' });
+            return;
+        }
+
+        // Helper: remove/add a load interval (start/end in hours, power_rate in W)
+        const addInterval = (arr, { power_rate, start, end }, sign) => {
+            const p = (power_rate / 1000) * sign; // to kW
+            let s = start, e = end;
+            if (e <= s) e += 24;                  // wrap midnight
+            for (let h = s; h < e; h++) arr[h % 24] += p;
+        };
+
+        // Helper: compute duration hours from time strings
+        const findDuration = (start, end) => {
+            let s = parseInt(start.slice(0, 2), 10);
+            let e = parseInt(end.slice(0, 2), 10) || 24;
+            return e <= s ? e + 24 - s : e - s;
+        };
+
+        // 4) Prepare mutable arrays
+        const shiftedLoadHr = [...baseLoad];
+        const updates = [];
+        let movedCount = 0;
+
+        // 5) Sort flexible loads by priority desc, then power desc
+        const flexLoads = [...loadRows]
+            .filter(l => l.priority > 1 && !l.is_all_day)
+            .sort((a, b) => b.priority - a.priority || b.power - a.power);
+
+        // 6) Greedy placement loop
+        for (const l of flexLoads) {
+            // Remove original
+            addInterval(
+                shiftedLoadHr,
+                {
+                    power_rate: l.power_rate,
+                    start: parseInt(l.start_time.slice(0, 2), 10),
+                    end: parseInt(l.end_time.slice(0, 2), 10) || 24
+                },
+                -1
+            );
+
+            const duration = findDuration(l.start_time, l.end_time);
+            const p_kW = l.power;
+
+            // Try every possible start hour 0–23
+            for (let tryStart = 0; tryStart < 24; tryStart++) {
+                let fits = true;
+                for (let h = 0; h < duration; h++) {
+                    const idx = (tryStart + h) % 24;
+                    if (shiftedLoadHr[idx] + p_kW > capacity[idx]) { fits = false; break; }
+                }
+                if (!fits) continue;
+
+                // Found a slot—add it back
+                addInterval(
+                    shiftedLoadHr,
+                    { power_rate: l.power_rate, start: tryStart, end: (tryStart + duration) % 24 },
+                    +1
+                );
+
+                // Record update for “Apply Shift”
+                updates.push({
+                    id: l.id,
+                    start: `${String(tryStart).padStart(2, '0')}:00`,
+                    end: `${String((tryStart + duration) % 24).padStart(2, '0')}:00`
+                });
+                movedCount++;
+                break;
+            }
+        }
+
+        // 7) Build preview series with the new shifted load curve
+        const previewSeries = hourSeries.map((p, h) => ({
+            ...p,
+            ShiftedLoad: +shiftedLoadHr[h].toFixed(2)
+        }));
+
+        // 8) Update state for chart preview
+        setHourSeries(previewSeries);
+        setPreview({ series: previewSeries, updates });
+        const costAfter = previewSeries.reduce(
+            (sum, { ShiftedLoad, Production, hour }) =>
+                sum + Math.max(ShiftedLoad - Production, 0) * priceHr[+hour.slice(0, 2)],
+            0
+        );
+        setCosts(costs => ({ before: costs.before, after: +costAfter.toFixed(2) }));
+        setSnack({
+            open: true,
+            msg: `Shifted ${movedCount} load${movedCount === 1 ? '' : 's'} – preview only.`,
+            sev: 'success'
         });
-        movedCount++;
-        break;
-      }
     }
-  
-    // 7) Build preview series with the new shifted load curve
-    const previewSeries = hourSeries.map((p, h) => ({
-      ...p,
-      ShiftedLoad: +shiftedLoadHr[h].toFixed(2)
-    }));
-  
-    // 8) Update state for chart preview
-    setHourSeries(previewSeries);
-    setPreview({ series: previewSeries, updates });
-    setSnack({
-      open: true,
-      msg : `Shifted ${movedCount} load${movedCount===1?'':'s'} – preview only.`,
-      sev : 'success'
-    });
-  }
-  
+
 
     async function applyShift() {
         if (!preview) return;
@@ -299,6 +344,29 @@ async function runShifting() {
         setPreview(null);
         reload();           // refetch from DB to show committed schedule
     }
+
+    const scheduleRows = loadRows.map(l => {
+        const u = preview?.updates.find(u => u.id === l.id);
+        const oldStart = l.is_all_day ? '00:00' : l.start_time;
+        const oldEnd = l.is_all_day ? '24:00' : l.end_time;
+        const newStart = u
+            ? u.start
+            : oldStart;
+        const newEnd = u
+            ? u.end
+            : oldEnd;
+
+        return {
+            id: l.id,
+            name: l.name,
+            oldStart,
+            oldEnd,
+            newStart,
+            newEnd
+        };
+    });
+
+
 
 
     if (loading) return <CircularProgress />;
@@ -369,6 +437,17 @@ async function runShifting() {
                     </CardContent></Card>
                 </Grid>
 
+                {/* Tariff & Cost Summary */}
+                <Grid item xs={12}>
+                    <Card sx={{ mb: 2 }}>
+                        <CardContent>
+                            <Typography variant="subtitle1"><strong>Tariff (₺/kWh):</strong> Off-Peak 00–06 & 22–24=0.35 · Mid-Peak 06–17=0.90 · Peak 17–22=1.40</Typography>
+                            <Typography variant="subtitle1">Cost Before Shift: ₺{costs.before.toFixed(2)}</Typography>
+                            <Typography variant="subtitle1">Cost After  Shift: ₺{costs.after.toFixed(2)}</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
                 {/* Combined hourly graph + shift button */}
                 <Grid item xs={12}>
                     <Card><CardContent>
@@ -406,6 +485,39 @@ async function runShifting() {
                             </Button>
                         )}
                     </CardContent></Card>
+                </Grid>
+
+                {/* Schedule Preview (all loads) */}
+                <Grid item xs={12} sx={{ mt: 3 }}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                                {preview ? 'Shift Preview Schedule' : 'Current Schedule'}
+                            </Typography>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>Device</TableCell>
+                                        <TableCell>Old Start</TableCell>
+                                        <TableCell>Old End</TableCell>
+                                        <TableCell>New Start</TableCell>
+                                        <TableCell>New End</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {scheduleRows.map(r => (
+                                        <TableRow key={r.id}>
+                                            <TableCell>{r.name}</TableCell>
+                                            <TableCell>{r.oldStart}</TableCell>
+                                            <TableCell>{r.oldEnd}</TableCell>
+                                            <TableCell>{r.newStart}</TableCell>
+                                            <TableCell>{r.newEnd}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
                 </Grid>
             </Grid>
             <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>

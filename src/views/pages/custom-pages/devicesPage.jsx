@@ -15,7 +15,9 @@ import {
     Select,
     MenuItem,
     IconButton,
-    Paper
+    Paper,
+    FormControlLabel,
+    Checkbox
 } from '@mui/material';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { supabase } from '../../../api/supabaseClient';
@@ -42,6 +44,7 @@ const LoadsScreen = () => {
     const [selectedDevice, setSelectedDevice] = useState(null);
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
+    const [isAllDay, setAllDay] = useState(false);
 
     // Get current user session (this assumes you're using Supabase Auth)
     const [user, setUser] = useState(null);
@@ -119,12 +122,18 @@ const LoadsScreen = () => {
 
     // Submit the scheduling data to Supabase
     const handleScheduleSubmit = async () => {
-        if (!user || !selectedDevice || startTime === '' || endTime === '') {
+        // 1) basic required check, but skip time fields if all-day
+        if (
+            !user ||
+            !selectedDevice ||
+            (!isAllDay && (startTime === '' || endTime === ''))
+        ) {
             alert('Please fill in all fields.');
             return;
         }
-        // Ensure that startTime is before endTime
-        if (startTime >= endTime) {
+
+        // 2) only enforce ordering when not all-day
+        if (!isAllDay && startTime >= endTime) {
             alert('Start time must be before end time.');
             return;
         }
@@ -133,9 +142,10 @@ const LoadsScreen = () => {
             device_id: selectedDevice.id,
             device_name: selectedDevice.name,
             power_rate: selectedDevice.power_rate,
-            priority : selectedDevice.priority,
-            start_time: startTime,
-            end_time: endTime,
+            priority: selectedDevice.priority,
+            start_time: isAllDay ? '00:00' : startTime,
+            end_time: isAllDay ? '00:00' : endTime,
+            is_all_day: isAllDay
         };
 
         const { data, error } = await supabase
@@ -196,6 +206,7 @@ const LoadsScreen = () => {
                     <FormControl fullWidth sx={{ mb: 2 }}>
                         <InputLabel id="start-time-label">Start Time</InputLabel>
                         <Select
+                            disabled={isAllDay}
                             labelId="start-time-label"
                             value={startTime}
                             label="Start Time"
@@ -211,6 +222,7 @@ const LoadsScreen = () => {
                     <FormControl fullWidth sx={{ mb: 3 }}>
                         <InputLabel id="end-time-label">End Time</InputLabel>
                         <Select
+                            disabled={isAllDay}
                             labelId="end-time-label"
                             value={endTime}
                             label="End Time"
@@ -223,6 +235,15 @@ const LoadsScreen = () => {
                             ))}
                         </Select>
                     </FormControl>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={isAllDay}
+                                onChange={e => setAllDay(e.target.checked)}
+                            />
+                        }
+                        label="Run all day"
+                    />
                     <Button variant="contained" color="primary" onClick={handleScheduleSubmit} fullWidth>
                         Save Schedule
                     </Button>

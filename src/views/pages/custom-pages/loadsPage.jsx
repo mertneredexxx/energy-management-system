@@ -127,47 +127,50 @@ export default function ScheduledDevicesTable() {
 
       {/* Scheduled Loads */}
       {scheduledLoads.length > 0 ? (
-        <TableContainer component={Paper} sx={{ mb: 4 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>Device Name</strong></TableCell>
-                <TableCell><strong>Power Rate (W)</strong></TableCell>
-                <TableCell><strong>Start Time</strong></TableCell>
-                <TableCell><strong>End Time</strong></TableCell>
-                <TableCell align="center"><strong>Actions</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {scheduledLoads.map(load => (
-                <TableRow key={load.id}>
-                  <TableCell>{load.device_name}</TableCell>
-                  <TableCell>{load.power_rate}</TableCell>
-                  <TableCell>{load.start_time}</TableCell>
-                  <TableCell>{load.end_time}</TableCell>
-                  <TableCell align="center">
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      sx={{ mr: 1 }}
-                      onClick={() => openDetails(load, false)}
-                    >
-                      Details
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      onClick={() => handleDeleteLoad(load.id)}
-                    >
-                      Delete
-                    </Button>
-                  </TableCell>
+        <>
+          <Typography style={{marginBottom : '15px'}} variant="h6">Loads List In Daily</Typography>
+          <TableContainer component={Paper} sx={{ mb: 4 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Device Name</strong></TableCell>
+                  <TableCell><strong>Power Rate (W)</strong></TableCell>
+                  <TableCell><strong>Start Time</strong></TableCell>
+                  <TableCell><strong>End Time</strong></TableCell>
+                  <TableCell align="center"><strong>Actions</strong></TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {scheduledLoads.map(load => (
+                  <TableRow key={load.id}>
+                    <TableCell>{load.device_name}</TableCell>
+                    <TableCell>{load.power_rate}</TableCell>
+                    <TableCell>{load.start_time}</TableCell>
+                    <TableCell>{load.end_time}</TableCell>
+                    <TableCell align="center">
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        sx={{ mr: 1 }}
+                        onClick={() => openDetails(load, false)}
+                      >
+                        Details
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => handleDeleteLoad(load.id)}
+                      >
+                        Delete
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
       ) : (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
           No scheduled devices found.

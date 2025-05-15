@@ -54,6 +54,14 @@ const utilities = {
       url: '/home-settings',
       icon: icons.IconShadow,   // or consider icons.IconHome / icons.IconSettings
       breadcrumbs: false
+    },
+    {
+      id: 'export-data',
+      title: 'Export Data',
+      type: 'item',
+      url: '/export-data',
+      icon: icons.IconDeviceLaptop,   // or you might try icons.IconDeviceLaptop
+      breadcrumbs: false
     }
   ]
 };

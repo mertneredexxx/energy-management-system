@@ -6,6 +6,7 @@ import Loadable from 'ui-component/Loadable';
 import PrivateRoute from './PrivateRoute';
 import GraphsPage from '../views/pages/custom-pages/graphsPages';
 import InfoPage from '../views/pages/custom-pages/currentInfoPage';
+import ExportPage from '../views/pages/custom-pages/exportData';
 
 // pages
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/Default')));
@@ -102,6 +103,14 @@ const MainRoutes = {
       element: (
         <PrivateRoute>
           <HomeSettingsPage />
+        </PrivateRoute>
+      )
+    },
+    {
+      path: '/export-data',
+      element: (
+        <PrivateRoute>
+          <ExportPage />
         </PrivateRoute>
       )
     },
