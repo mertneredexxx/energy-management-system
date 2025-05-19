@@ -1,4 +1,4 @@
-export const DASHBOARD_PATH = '/sample-page';
+export const DASHBOARD_PATH = '/https://www.yildiz.edu.tr/';
 
 const config = {
   fontFamily: `'Roboto', sans-serif`,

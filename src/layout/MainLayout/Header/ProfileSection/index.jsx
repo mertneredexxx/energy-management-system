@@ -13,7 +13,6 @@ import MainCard from 'ui-component/cards/MainCard';
 import Transitions from 'ui-component/extended/Transitions';
 import useConfig from 'hooks/useConfig';
 import { supabase } from '../../../../api/supabaseClient';
-import User1 from 'assets/images/users/user-round.svg';
 import { IconSettings } from '@tabler/icons-react';
 
 export default function ProfileSection() {
@@ -77,7 +76,6 @@ export default function ProfileSection() {
         }}
         icon={
           <Avatar
-            src={User1}
             alt={profile.fullName}
             sx={{
               ...theme.typography.mediumAvatar,

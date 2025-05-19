@@ -87,41 +87,41 @@ export default function CompareModal({
     );
 
     const handleDownload = async () => {
-  const el = document.getElementById('compare-modal');
-  if (!el) return;
+        const el = document.getElementById('compare-modal');
+        if (!el) return;
 
-  // Temporarily expand to full height
-  const orig = {
-    height:   el.style.height,
-    overflow: el.style.overflow,
-    scroll:   el.scrollTop
-  };
-  el.style.height   = `${el.scrollHeight}px`;
-  el.style.overflow = 'visible';
-  el.scrollTop      = 0;
+        // Temporarily expand to full height
+        const orig = {
+            height: el.style.height,
+            overflow: el.style.overflow,
+            scroll: el.scrollTop
+        };
+        el.style.height = `${el.scrollHeight}px`;
+        el.style.overflow = 'visible';
+        el.scrollTop = 0;
 
-  // Render full content
-  const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+        // Render full content
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true });
 
-  // Restore original
-  el.style.height   = orig.height;
-  el.style.overflow = orig.overflow;
-  el.scrollTop      = orig.scroll;
+        // Restore original
+        el.style.height = orig.height;
+        el.style.overflow = orig.overflow;
+        el.scrollTop = orig.scroll;
 
-  // Convert to image data
-  const imgData = canvas.toDataURL('image/png');
+        // Convert to image data
+        const imgData = canvas.toDataURL('image/png');
 
-  // A4 width in mm
-  const pdfW = 210;
-  // Compute PDF height so image isn’t squashed
-  const pdfH = (canvas.height * pdfW) / canvas.width;
+        // A4 width in mm
+        const pdfW = 210;
+        // Compute PDF height so image isn’t squashed
+        const pdfH = (canvas.height * pdfW) / canvas.width;
 
-  // Create one-page PDF of exact content size
-  const pdf = new jsPDF('p', 'mm', [pdfW, pdfH]);
-  pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+        // Create one-page PDF of exact content size
+        const pdf = new jsPDF('p', 'mm', [pdfW, pdfH]);
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
 
-  pdf.save(`compare_${reportA.name}_vs_${reportB.name}.pdf`);
-};
+        pdf.save(`compare_${reportA.name}_vs_${reportB.name}.pdf`);
+    };
 
 
 
@@ -152,102 +152,102 @@ export default function CompareModal({
         </Box>
     );
 
-   const explain = () => {
-  const lines = [];
+    const explain = () => {
+        const lines = [];
 
-  // Threshold comparison
-  if (reportA.threshold_kw !== reportB.threshold_kw) {
-    lines.push(
-      <>
-        The peak-capacity threshold for <strong>{reportA.name}</strong> was configured at {reportA.threshold_kw} kW, 
-        whereas <strong>{reportB.name}</strong> increased this limit to {reportB.threshold_kw} kW to allow more headroom during peak tariff windows.
-      </>
-    );
-  } else {
-    lines.push(
-      <>
-        Both <strong>{reportA.name}</strong> and <strong>{reportB.name}</strong> share the same peak-capacity threshold of {reportA.threshold_kw} kW, 
-        ensuring a consistent constraint on maximum grid draw during peak hours.
-      </>
-    );
-  }
+        // Threshold comparison
+        if (reportA.threshold_kw !== reportB.threshold_kw) {
+            lines.push(
+                <>
+                    The peak-capacity threshold for <strong>{reportA.name}</strong> was configured at {reportA.threshold_kw} kW,
+                    whereas <strong>{reportB.name}</strong> increased this limit to {reportB.threshold_kw} kW to allow more headroom during peak tariff windows.
+                </>
+            );
+        } else {
+            lines.push(
+                <>
+                    Both <strong>{reportA.name}</strong> and <strong>{reportB.name}</strong> share the same peak-capacity threshold of {reportA.threshold_kw} kW,
+                    ensuring a consistent constraint on maximum grid draw during peak hours.
+                </>
+            );
+        }
 
-  // Season comparison
-  if (reportA.season !== reportB.season) {
-    lines.push(
-      <>
-        <strong>{reportA.name}</strong> was analyzed under “{reportA.season}” tariff schedules, while <strong>{reportB.name}</strong> uses the “{reportB.season}” schedule, 
-        altering off-peak and peak definitions and thus impacting the cost-optimization strategy.
-      </>
-    );
-  } else {
-    lines.push(
-      <>
-        Both <strong>{reportA.name}</strong> and <strong>{reportB.name}</strong> are evaluated under the same “{reportA.season}” tariff season, 
-        keeping the tariff windows identical across comparisons.
-      </>
-    );
-  }
+        // Season comparison
+        if (reportA.season !== reportB.season) {
+            lines.push(
+                <>
+                    <strong>{reportA.name}</strong> was analyzed under “{reportA.season}” tariff schedules, while <strong>{reportB.name}</strong> uses the “{reportB.season}” schedule,
+                    altering off-peak and peak definitions and thus impacting the cost-optimization strategy.
+                </>
+            );
+        } else {
+            lines.push(
+                <>
+                    Both <strong>{reportA.name}</strong> and <strong>{reportB.name}</strong> are evaluated under the same “{reportA.season}” tariff season,
+                    keeping the tariff windows identical across comparisons.
+                </>
+            );
+        }
 
-  // Daily totals & renewables
-  lines.push(
-    <>
-      On <strong>{reportA.name}</strong>, the total aggregated daily demand reached <strong>{reportA.daily_total_load} kWh</strong>, 
-      while renewable generation supplied <strong>{reportA.total_renewable} kWh</strong>, demonstrating a net 
-      {(reportA.total_renewable - reportA.daily_total_load) >= 0 ? ' surplus.' : ' deficit.'}
-    </>
-  );
+        // Daily totals & renewables
+        lines.push(
+            <>
+                On <strong>{reportA.name}</strong>, the total aggregated daily demand reached <strong>{reportA.daily_total_load} kWh</strong>,
+                while renewable generation supplied <strong>{reportA.total_renewable} kWh</strong>, demonstrating a net
+                {(reportA.total_renewable - reportA.daily_total_load) >= 0 ? ' surplus.' : ' deficit.'}
+            </>
+        );
 
-  lines.push(
-    <>
-      Similarly, <strong>{reportB.name}</strong> shows <strong>{reportB.daily_total_load} kWh</strong> of daily load 
-      with <strong>{reportB.total_renewable} kWh</strong> from renewables, 
-      indicating how seasonal or configuration changes affect the balance between demand and on-site generation.
-    </>
-  );
+        lines.push(
+            <>
+                Similarly, <strong>{reportB.name}</strong> shows <strong>{reportB.daily_total_load} kWh</strong> of daily load
+                with <strong>{reportB.total_renewable} kWh</strong> from renewables,
+                indicating how seasonal or configuration changes affect the balance between demand and on-site generation.
+            </>
+        );
 
-  // Loads & shifts
-  const shiftedA = reportA.schedule_rows.filter(r => r.oldStart !== r.newStart).length;
-  lines.push(
-    <>
-      In <strong>{reportA.name}</strong>, {reportA.loads.length} discrete loads were considered. 
-      Of these, <strong>{shiftedA}</strong> device{shiftedA !== 1 ? 's' : ''} were algorithmically shifted into the 22:00 off-peak window to shave peaks.
-    </>
-  );
-  const shiftedB = reportB.schedule_rows.filter(r => r.oldStart !== r.newStart).length;
-  lines.push(
-    <>
-      For <strong>{reportB.name}</strong>, {reportB.loads.length} loads were processed, with <strong>{shiftedB}</strong> shift operation
-      {shiftedB !== 1 ? 's' : ''} performed, showcasing how the revised threshold/season parameters influence rescheduling.
-    </>
-  );
+        // Loads & shifts
+        const shiftedA = reportA.schedule_rows.filter(r => r.oldStart !== r.newStart).length;
+        lines.push(
+            <>
+                In <strong>{reportA.name}</strong>, {reportA.loads.length} discrete loads were considered.
+                Of these, <strong>{shiftedA}</strong> device{shiftedA !== 1 ? 's' : ''} were algorithmically shifted into the 22:00 off-peak window to shave peaks.
+            </>
+        );
+        const shiftedB = reportB.schedule_rows.filter(r => r.oldStart !== r.newStart).length;
+        lines.push(
+            <>
+                For <strong>{reportB.name}</strong>, {reportB.loads.length} loads were processed, with <strong>{shiftedB}</strong> shift operation
+                {shiftedB !== 1 ? 's' : ''} performed, showcasing how the revised threshold/season parameters influence rescheduling.
+            </>
+        );
 
-  // Costs & savings
-  const saveA = ((reportA.costs.before - reportA.costs.after) / reportA.costs.before * 100).toFixed(1);
-  lines.push(
-    <>
-      Cost analysis for <strong>{reportA.name}</strong> reveals an original billing of ₺{reportA.costs.before.toFixed(2)}, 
-      reduced to ₺{reportA.costs.after.toFixed(2)} after optimization — a savings of {saveA}%.
-    </>
-  );
-  const saveB = ((reportB.costs.before - reportB.costs.after) / reportB.costs.before * 100).toFixed(1);
-  lines.push(
-    <>
-      Under <strong>{reportB.name}</strong>, the cost dropped from ₺{reportB.costs.before.toFixed(2) + " "} 
-      to ₺{reportB.costs.after.toFixed(2)}, achieving a savings of {saveB}%.
-    </>
-  );
+        // Costs & savings
+        const saveA = ((reportA.costs.before - reportA.costs.after) / reportA.costs.before * 100).toFixed(1);
+        lines.push(
+            <>
+                Cost analysis for <strong>{reportA.name}</strong> reveals an original billing of ₺{reportA.costs.before.toFixed(2)},
+                reduced to ₺{reportA.costs.after.toFixed(2)} after optimization — a savings of {saveA}%.
+            </>
+        );
+        const saveB = ((reportB.costs.before - reportB.costs.after) / reportB.costs.before * 100).toFixed(1);
+        lines.push(
+            <>
+                Under <strong>{reportB.name}</strong>, the cost dropped from ₺{reportB.costs.before.toFixed(2) + " "}
+                to ₺{reportB.costs.after.toFixed(2)}, achieving a savings of {saveB}%.
+            </>
+        );
 
-  return (
-    <>
-      {lines.map((content, i) => (
-        <Typography key={i} paragraph>
-          {content}
-        </Typography>
-      ))}
-    </>
-  );
-};
+        return (
+            <>
+                {lines.map((content, i) => (
+                    <Typography key={i} paragraph>
+                        {content}
+                    </Typography>
+                ))}
+            </>
+        );
+    };
 
 
 

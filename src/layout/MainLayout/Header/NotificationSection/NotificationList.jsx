@@ -16,7 +16,6 @@ import Box from '@mui/material/Box';
 
 // assets
 import { IconBrandTelegram, IconBuildingStore, IconMailbox, IconPhoto } from '@tabler/icons-react';
-import User1 from 'assets/images/users/user-round.svg';
 
 function ListItemWrapper({ children }) {
   const theme = useTheme();
@@ -56,7 +55,7 @@ export default function NotificationList() {
           }
         >
           <ListItemAvatar>
-            <Avatar alt="John Doe" src={User1} />
+            <Avatar alt="John Doe" />
           </ListItemAvatar>
           <ListItemText primary="John Doe" />
         </ListItem>
@@ -135,7 +134,7 @@ export default function NotificationList() {
           }
         >
           <ListItemAvatar>
-            <Avatar alt="John Doe" src={User1} />
+            <Avatar alt="John Doe" />
           </ListItemAvatar>
           <ListItemText primary={<Typography variant="subtitle1">John Doe</Typography>} />
         </ListItem>
@@ -165,7 +164,7 @@ export default function NotificationList() {
           }
         >
           <ListItemAvatar>
-            <Avatar alt="John Doe" src={User1} />
+            <Avatar alt="John Doe"  />
           </ListItemAvatar>
           <ListItemText primary={<Typography variant="subtitle1">John Doe</Typography>} />
         </ListItem>
