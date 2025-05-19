@@ -28,17 +28,17 @@ const utilities = {
       title: 'Current Information',
       type: 'item',
       url: '/current-info',
-      icon: icons.IconDeviceLaptop,   // or you might try icons.IconDeviceLaptop
+      icon: icons.IconChartBar,   // or you might try icons.IconDeviceLaptop
       breadcrumbs: false
     },
-    {
-      id: 'graphs',
-      title: 'Graphs',
-      type: 'item',
-      url: '/graphs',
-      icon: icons.IconChartBar,  // using the suggested icon for graphs
-      breadcrumbs: false
-    },
+    // {
+    //   id: 'graphs',
+    //   title: 'Graphs',
+    //   type: 'item',
+    //   url: '/graphs',
+    //   icon: icons.IconChartBar,  // using the suggested icon for graphs
+    //   breadcrumbs: false
+    // },
     {
       id: 'selected-devices',
       title: 'Loads',
@@ -60,6 +60,14 @@ const utilities = {
       title: 'Export Data',
       type: 'item',
       url: '/export-data',
+      icon: icons.IconDeviceLaptop,   // or you might try icons.IconDeviceLaptop
+      breadcrumbs: false
+    },
+    {
+      id: 'reports-page',
+      title: 'Reports',
+      type: 'item',
+      url: '/reports-page',
       icon: icons.IconDeviceLaptop,   // or you might try icons.IconDeviceLaptop
       breadcrumbs: false
     }

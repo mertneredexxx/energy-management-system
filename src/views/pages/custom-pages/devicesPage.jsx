@@ -182,6 +182,14 @@ const LoadsScreen = () => {
                                 <Typography variant="body2" color="text.secondary">
                                     Power Rate: {device.power_rate} W
                                 </Typography>
+                                <Typography variant="body3" color="text.secondary">
+                                    Priority:{" "}
+                                    {device.priority && device.priority >= 1 && device.priority <= 3
+                                        ? Array.from({ length: device.priority }, (_, i) => (
+                                            <span key={i} style={{ color: "#FFD700", fontSize: "1.2em" }}>★</span>
+                                        ))
+                                        : device.priority}
+                                </Typography>
                             </CardContent>
                             <CardActions sx={{ justifyContent: 'flex-end' }}>
                                 <IconButton

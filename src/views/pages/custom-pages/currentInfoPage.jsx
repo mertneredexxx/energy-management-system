@@ -14,6 +14,11 @@ import {
     Button,
     Snackbar,
     Alert,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    TextField,
+    DialogActions,
 } from '@mui/material';
 import { supabase } from '../../../api/supabaseClient';
 import {
@@ -25,6 +30,7 @@ import {
     CartesianGrid,
     Tooltip,
     Legend,
+    ReferenceLine,
 } from 'recharts';
 
 /* -------------------------------------------------------------
@@ -37,27 +43,115 @@ import {
  * ------------------------------------------------------------- */
 
 export default function InfoPage() {
+    /* ---------- constants (edit if you wish) ---------- */
+    const GRID_LIMIT = 3;       // 3 kW apartment flat
+
+    const [threshold, setThreshold] = useState(GRID_LIMIT);
+    const [saving, setSaving] = useState(false);
+    const [homeSettings, setHomeSettings] = useState(GRID_LIMIT);
     const [loading, setLoading] = useState(true);
     const [loadRows, setLoadRows] = useState([]);
+    const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [reportName, setReportName] = useState('');
+    const [reportDesc, setReportDesc] = useState('');
     const [prodRows, setProdRows] = useState([]);
     const [hourSeries, setHourSeries] = useState([]);          // before + after
     const [totals, setTotals] = useState({ load: 0, prod: 0, net: 0 });
     const [snack, setSnack] = useState({ open: false, msg: '', sev: 'info' });
     const [preview, setPreview] = useState(null); // null or { series: [...], updates: [...] }
     const [costs, setCosts] = useState({ before: 0, after: 0 });
-
-    /* ---------- constants (edit if you wish) ---------- */
-    const SUN_HOURS = 5.0;
-    const WIND_CF = 0.30;
-    const PR = 0.75;
-    const GRID_LIMIT = 3;       // 3 kW apartment flat
+    const [SUN_HOURS, setSunHours] = useState(5.0);
+    const [WIND_CF, setWindCf] = useState(0.30);
+    const [PR, setPr] = useState(0.75);
 
 
-    const priceHr = Array.from({ length: 24 }, (_, h) =>
-        (h < 6 || h >= 22) ? 0.35 :   // off-peak
-            (h < 17) ? 0.90 :   // mid-peak
-                1.40     // peak
-    );
+    const [priceHr, setPriceHr] = useState(Array.from({ length: 24 }, (_, h) => {
+        if (homeSettings?.season === 'summer') {
+            if (h < 7 || h >= 23) return 0.30;
+            if (h < 17) return 1.00;
+            return 1.60;
+        } else {
+            if (h < 6 || h >= 22) return 0.35;
+            if (h < 17) return 0.90;
+            return 1.40;
+        }
+    }));
+
+    useEffect(() => {
+        setPriceHr(Array.from({ length: 24 }, (_, h) => {
+            if (homeSettings?.season === 'summer') {
+                if (h < 7 || h >= 23) return 0.30;
+                if (h < 17) return 1.00;
+                return 1.60;
+            } else {
+                if (h < 6 || h >= 22) return 0.35;
+                if (h < 17) return 0.90;
+                return 1.40;
+            }
+        }));
+    }, [homeSettings]);
+
+    const openReportDialog = () => setReportModalOpen(true);
+    const closeReportDialog = () => {
+        setReportModalOpen(false);
+        setReportName('');
+        setReportDesc('');
+    };
+
+
+    async function saveReport() {
+        if (!reportName.trim() || !reportDesc.trim()) return;
+        setSaving(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        // 1) grab current home_settings for this user
+        const { data: hs, error: hsErr } = await supabase
+            .from('home_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+        if (hsErr) {
+            console.error(hsErr);
+            setSnack({ open: true, msg: 'Failed to load home settings', sev: 'error' });
+            setSaving(false);
+            return;
+        }
+
+        const { data: [ev] = [] } = await supabase
+            .from('ev_sessions')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        // 2) build report payload
+        const payload = {
+            user_id: user.id,
+            name: reportName,
+            description: reportDesc,                    // you could prompt for this
+            season: hs.season,
+            threshold_kw: hs.threshold_kw,
+            home_settings: hs,
+            loads: loadRows,
+            renewables: prodRows,
+            ev_session: ev,                    // the latest ev you fetched
+            hour_series: hourSeries,
+            hour_series_shifted: preview?.series ?? null,
+            costs: costs
+        };
+
+        // 3) insert
+        const { error } = await supabase
+            .from('reports')
+            .insert(payload);
+        if (error) {
+            console.error(error);
+            setSnack({ open: true, msg: 'Failed to save report', sev: 'error' });
+        } else {
+            closeReportDialog();
+            setSnack({ open: true, msg: 'Report saved!', sev: 'success' });
+        }
+        setSaving(false);
+    }
 
 
     /* ---------- helper to (de)apply a load to array ---- */
@@ -88,6 +182,22 @@ export default function InfoPage() {
 
         const loadHourly = Array(24).fill(0);
         const prodHourly = Array(24).fill(0);
+
+        /* threshold */
+        const { data: hs } = await supabase
+            .from('home_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+        if (hs?.threshold_kw != null) {
+            setThreshold(hs.threshold_kw);
+        }
+
+        const season = hs?.season || 'winter';
+        setHomeSettings(hs);    // new state if you need it elsewhere
+        season === 'summer' ? setSunHours(6.5) : setSunHours(5.0);
+        season === 'summer' ? setWindCf(0.25) : setWindCf(0.30);
 
         /* loads */
         const { data: loads = [] } = await supabase.from('loads').select('*').eq('user_id', user.id);
@@ -432,7 +542,7 @@ export default function InfoPage() {
                             Net Balance: {totals.net} kWh {totals.net >= 0 ? '(Surplus)' : '(Deficit)'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            Constants · SUN_HOURS = 5 h/day · WIND_CF = 0.30 · PR = 0.75
+                            Constants · SUN_HOURS = {SUN_HOURS} h/day · WIND_CF = {WIND_CF} · PR = {PR}
                         </Typography>
                     </CardContent></Card>
                 </Grid>
@@ -441,7 +551,12 @@ export default function InfoPage() {
                 <Grid item xs={12}>
                     <Card sx={{ mb: 2 }}>
                         <CardContent>
-                            <Typography variant="subtitle1"><strong>Tariff (₺/kWh):</strong> Off-Peak 00–06 & 22–24=0.35 · Mid-Peak 06–17=0.90 · Peak 17–22=1.40</Typography>
+                            <Typography variant="subtitle1">
+                                <strong>Tariff (₺/kWh):</strong>{' '}
+                                {homeSettings?.season === 'summer'
+                                    ? 'Off-Peak 00–07 & 23–24=0.30 · Mid-Peak 07–17=1.00 · Peak 17–23=1.60'
+                                    : 'Off-Peak 00–06 & 22–24=0.35 · Mid-Peak 06–17=0.90 · Peak 17–22=1.40'}
+                            </Typography>
                             <Typography variant="subtitle1">Cost Before Shift: ₺{costs.before.toFixed(2)}</Typography>
                             <Typography variant="subtitle1">Cost After  Shift: ₺{costs.after.toFixed(2)}</Typography>
                         </CardContent>
@@ -463,6 +578,13 @@ export default function InfoPage() {
                                 <Line type="monotone" dataKey="ShiftedLoad" stroke="#ff9800" dot={false} />
                                 <Line type="monotone" dataKey="EV" stroke="#2196f3" dot={false} />
                                 <Line type="monotone" dataKey="Production" stroke="#4caf50" dot={false} />
+                                {/* horizontal threshold line */}
+                                <ReferenceLine
+                                    y={threshold}
+                                    stroke="#333"
+                                    strokeDasharray="5 5"
+                                    label={{ position: 'right', value: `${threshold} kW`, fill: '#333' }}
+                                />
                             </LineChart>
                         </ResponsiveContainer>
                         <Button
@@ -520,6 +642,50 @@ export default function InfoPage() {
                     </Card>
                 </Grid>
             </Grid>
+            <Grid item xs={12} sx={{ textAlign: 'right', my: 2 }}>
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={openReportDialog}
+                    disabled={saving}
+                >
+                    {saving ? 'Saving…' : 'Save Report'}
+                </Button>
+            </Grid>
+            {/* Save Report Dialog */}
+            <Dialog open={reportModalOpen} onClose={closeReportDialog} maxWidth="sm" fullWidth>
+                <DialogTitle>Save Current Report</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        label="Report Name"
+                        fullWidth
+                        value={reportName}
+                        onChange={e => setReportName(e.target.value)}
+                        sx={{ mt: 2 }}
+                    />
+                    <TextField
+                        label="Description"
+                        fullWidth
+                        multiline
+                        rows={3}
+                        value={reportDesc}
+                        onChange={e => setReportDesc(e.target.value)}
+                        sx={{ mt: 2 }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeReportDialog} disabled={saving}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={saveReport}
+                        disabled={!reportName.trim() || !reportDesc.trim() || saving}
+                    >
+                        {saving ? 'Saving…' : 'Save'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
             <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>
                 <Alert severity={snack.sev} variant="filled" sx={{ width: '100%' }}>
                     {snack.msg}

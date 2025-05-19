@@ -7,6 +7,7 @@ import PrivateRoute from './PrivateRoute';
 import GraphsPage from '../views/pages/custom-pages/graphsPages';
 import InfoPage from '../views/pages/custom-pages/currentInfoPage';
 import ExportPage from '../views/pages/custom-pages/exportData';
+import ReportsPage from '../views/pages/custom-pages/reportsPages';
 
 // pages
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/Default')));
@@ -19,6 +20,7 @@ const Register = Loadable(lazy(() => import('views/pages/authentication/Register
 const HomeSettingsPage = Loadable(lazy(() => import('views/pages/custom-pages/homeSettings')));
 const LoadsScreen = Loadable(lazy(() => import('views/pages/custom-pages/loadsPage')));
 const DevicesScreen = Loadable(lazy(() => import('views/pages/custom-pages/devicesPage')));
+
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -114,6 +116,14 @@ const MainRoutes = {
         </PrivateRoute>
       )
     },
+     {
+      path: '/reports-page',
+      element: (
+        <PrivateRoute>
+          <ReportsPage />
+        </PrivateRoute>
+      )
+    },
     {
       path: '/loads',
       element: (
@@ -122,14 +132,14 @@ const MainRoutes = {
         </PrivateRoute>
       )
     },
-    {
-      path: '/graphs',
-      element: (
-        <PrivateRoute>
-          <GraphsPage />
-        </PrivateRoute>
-      )
-    }
+    // {
+    //   path: '/graphs',
+    //   element: (
+    //     <PrivateRoute>
+    //       <GraphsPage />
+    //     </PrivateRoute>
+    //   )
+    // }
   ]
 };
 

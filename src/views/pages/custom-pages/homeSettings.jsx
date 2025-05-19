@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Container,
     Typography,
@@ -15,6 +15,7 @@ import {
     FormLabel
 } from '@mui/material';
 import EnergyGeneration from './energyGenerationPage';
+import { supabase } from '../../../api/supabaseClient';
 
 const HomeSettingsPage = () => {
     // State for energy generation settings
@@ -27,9 +28,70 @@ const HomeSettingsPage = () => {
     const [meteorological, setMeteorological] = useState({
         dataType: 'Solar', // default selection
         duration: 'One Month', // default duration
-        season: 'Winter',   
+        season: 'Winter',
+    });
+    const [settings, setSettings] = useState({
+        energy_type: 'solar',
+        duration: 'month',
+        season: 'winter',
+        threshold_kw: 3,
     });
 
+    // Fetch (or create) the single home_settings row
+    useEffect(() => {
+        (async () => {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // try to grab existing
+            let { data, error } = await supabase
+                .from('home_settings')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            if (error && error.code === 'PGRST116') {
+                // not found → insert defaults
+                const { data: inserted } = await supabase.from('home_settings').insert({
+                    user_id: user.id,
+                    energy_type: settings.energy_type,
+                    duration: settings.duration,
+                    season: settings.season,
+                    threshold_kw: settings.threshold_kw,
+                }).single();
+                data = inserted;
+            }
+
+            if (data) {
+                setSettings({
+                    energy_type: data.energy_type,
+                    duration: data.duration,
+                    season: data.season,
+                    threshold_kw: data.threshold_kw,
+                });
+            }
+
+            setLoading(false);
+        })();
+    }, []);
+
+    // whenever one field changes, write back
+    const upsertSetting = async (changes) => {
+        setSettings((s) => ({ ...s, ...changes }));
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+        await supabase.from('home_settings').upsert(
+            {
+                user_id: user.id,
+                ...settings,
+                ...changes,
+            },
+            { onConflict: 'user_id' }
+        );
+    };
     const handleSeasonChange = (_, value) =>
         setMeteorological(prev => ({ ...prev, season: value }));
 
@@ -103,29 +165,23 @@ const HomeSettingsPage = () => {
                     <EnergyGeneration />
                 </Grid>
 
-                {/* Meteorological Data Section */}
                 <Grid item xs={12}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
-                                Get Meteorological Data
+                                Home & Meteorological Settings
                             </Typography>
 
-                            <Typography variant="body2" color="textSecondary" gutterBottom>
-                                Select the type of meteorological data, the duration, and the season.
-                            </Typography>
-
-                            {/* Data Type */}
+                            {/* Energy Type */}
                             <FormControl component="fieldset" fullWidth sx={{ mt: 2 }}>
-                                <FormLabel component="legend">Data Type</FormLabel>
+                                <FormLabel component="legend">Energy Type</FormLabel>
                                 <RadioGroup
                                     row
-                                    name="dataType"
-                                    value={meteorological.dataType}
-                                    onChange={handleMeteorologicalTypeChange}
+                                    value={settings.energy_type}
+                                    onChange={(e) => upsertSetting({ energy_type: e.target.value })}
                                 >
-                                    <FormControlLabel value="Solar" control={<Radio />} label="Solar" />
-                                    <FormControlLabel value="Wind" control={<Radio />} label="Wind" />
+                                    <FormControlLabel value="solar" control={<Radio />} label="Solar" />
+                                    <FormControlLabel value="wind" control={<Radio />} label="Wind" />
                                 </RadioGroup>
                             </FormControl>
 
@@ -134,40 +190,41 @@ const HomeSettingsPage = () => {
                                 <FormLabel component="legend">Duration</FormLabel>
                                 <RadioGroup
                                     row
-                                    name="duration"
-                                    value={meteorological.duration}
-                                    onChange={handleDurationChange}
+                                    value={settings.duration}
+                                    onChange={(e) => upsertSetting({ duration: e.target.value })}
                                 >
-                                    <FormControlLabel value="One Month" control={<Radio />} label="One Month" />
-                                    <FormControlLabel value="One Year" control={<Radio />} label="One Year" />
+                                    <FormControlLabel value="month" control={<Radio />} label="One Month" />
+                                    <FormControlLabel value="year" control={<Radio />} label="One Year" />
                                 </RadioGroup>
                             </FormControl>
 
-                            {/* ▼▼ New Season selector ▼▼ */}
+                            {/* Season */}
                             <FormControl component="fieldset" fullWidth sx={{ mt: 2 }}>
                                 <FormLabel component="legend">Season</FormLabel>
                                 <RadioGroup
                                     row
-                                    name="season"
-                                    value={meteorological.season}
-                                    onChange={handleSeasonChange}
+                                    value={settings.season}
+                                    onChange={(e) => upsertSetting({ season: e.target.value })}
                                 >
-                                    <FormControlLabel value="Winter" control={<Radio />} label="Winter" />
-                                    <FormControlLabel value="Summer" control={<Radio />} label="Summer" />
+                                    <FormControlLabel value="winter" control={<Radio />} label="Winter" />
+                                    <FormControlLabel value="summer" control={<Radio />} label="Summer" />
                                 </RadioGroup>
                             </FormControl>
-                            {/* ▲▲ -------------------- ▲▲ */}
 
-                            <Button
-                                variant="contained"
-                                color="primary"
+                            {/* Threshold */}
+                            <TextField
+                                label="Peak Threshold (kW)"
+                                type="number"
+                                fullWidth
                                 sx={{ mt: 2 }}
-                                onClick={fetchMeteorologicalData}
-                            >
-                                Get Meteorological Data
+                                value={settings.threshold_kw}
+                                onChange={(e) => upsertSetting({ threshold_kw: parseFloat(e.target.value) })}
+                            />
+
+                            <Button variant="contained" sx={{ mt: 3 }} onClick={() => {/* ... */ }}>
+                                Apply & Fetch Data
                             </Button>
                         </CardContent>
-
                     </Card>
                 </Grid>
             </Grid>
