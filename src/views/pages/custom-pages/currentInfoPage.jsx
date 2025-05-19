@@ -478,10 +478,17 @@ export default function InfoPage() {
         // 7) build preview series for today
         const previewSeries = [];
         for (let h = 0; h < 24; h++) {
+            const loadVal = baseLoad[h];
+            const shiftedVal = (h >= 0 && h <= 6)
+                // off-peak 00–06: keep original
+                ? loadVal
+                // otherwise use your shifted result
+                : +shiftedHr[h].toFixed(2);
+
             previewSeries.push({
                 hour: `${String(h).padStart(2, '0')}:00`,
-                Load: baseLoad[h],
-                ShiftedLoad: +shiftedHr[h].toFixed(2),
+                Load: loadVal,
+                ShiftedLoad: shiftedVal,
                 EV: hourSeries[h].EV,
                 Production: hourSeries[h].Production
             });
