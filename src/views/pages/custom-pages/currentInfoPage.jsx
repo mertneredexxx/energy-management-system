@@ -63,11 +63,16 @@ export default function InfoPage() {
     const [SUN_HOURS, setSunHours] = useState(5.0);
     const [WIND_CF, setWindCf] = useState(0.30);
     const [PR, setPr] = useState(0.75);
-
+    const [meteoAvg, setMeteoAvg] = useState({
+        avgIrrMonth: null,
+        avgWindMonth: null,
+        annIrrYear: null,
+        annWindYear: null
+    });
 
     const [priceHr, setPriceHr] = useState(Array.from({ length: 24 }, (_, h) => {
         if (homeSettings?.season === 'summer') {
-            if (h < 7 || h >= 23) return 0.30;
+            if (h < 7 || h >= 22) return 0.30;
             if (h < 17) return 1.00;
             return 1.60;
         } else {
@@ -80,7 +85,7 @@ export default function InfoPage() {
     useEffect(() => {
         setPriceHr(Array.from({ length: 24 }, (_, h) => {
             if (homeSettings?.season === 'summer') {
-                if (h < 7 || h >= 23) return 0.30;
+                if (h < 7 || h >= 22) return 0.30;
                 if (h < 17) return 1.00;
                 return 1.60;
             } else {
@@ -123,6 +128,26 @@ export default function InfoPage() {
             .order('created_at', { ascending: false })
             .limit(1);
 
+
+        // build scheduleRows exactly as in your component
+        const scheduleRows = loadRows.map(l => {
+            const u = preview?.updates.find(u => u.id === l.id);
+            const oldStart = l.is_all_day ? '00:00' : l.start_time;
+            const oldEnd = l.is_all_day ? '24:00' : l.end_time;
+            const newStart = u ? u.start : oldStart;
+            const newEnd = u ? u.end : oldEnd;
+
+            return {
+                id: l.id,
+                name: l.name,
+                oldStart,
+                oldEnd,
+                newStart,
+                newEnd,
+                isAllDay : l.is_all_day
+            };
+        });
+
         // 2) build report payload
         const payload = {
             user_id: user.id,
@@ -136,7 +161,10 @@ export default function InfoPage() {
             ev_session: ev,                    // the latest ev you fetched
             hour_series: hourSeries,
             hour_series_shifted: preview?.series ?? null,
-            costs: costs
+            costs: costs,
+            daily_total_load: totals.load,      // kWh
+            total_renewable: totals.prod,      // kWh
+            schedule_rows: scheduleRows    // ← add this
         };
 
         // 3) insert
@@ -195,9 +223,31 @@ export default function InfoPage() {
         }
 
         const season = hs?.season || 'winter';
+        const duration = hs?.duration;
         setHomeSettings(hs);    // new state if you need it elsewhere
         season === 'summer' ? setSunHours(6.5) : setSunHours(5.0);
         season === 'summer' ? setWindCf(0.25) : setWindCf(0.30);
+
+
+        /* meteo data */
+        const { data: meteoRows = [] } = await supabase
+            .from('meteorological_data')           // your table name
+            .select('data_type, duration, data')
+            .eq('user_id', user.id);
+
+        // reduce into a lookup:
+        const lookup = {};
+        meteoRows.forEach(r => {
+            if (r.data_type === 'Solar' && r.duration === 'One Month')
+                lookup.avgIrrMonth = r.data.average_irradiance;
+            if (r.data_type === 'Wind' && r.duration === 'One Month')
+                lookup.avgWindMonth = r.data.average_wind_speed;
+            if (r.data_type === 'Solar' && r.duration === 'One Year')
+                lookup.annIrrYear = r.data.annual_irradiance;
+            if (r.data_type === 'Wind' && r.duration === 'One Year')
+                lookup.annWindYear = r.data.annual_wind_speed;
+        });
+        setMeteoAvg(lookup);
 
         /* loads */
         const { data: loads = [] } = await supabase.from('loads').select('*').eq('user_id', user.id);
@@ -244,9 +294,17 @@ export default function InfoPage() {
         const prodTbl = sels.map(r => {
             const type = r.catalog.renewable_type;
             const rated = Number(r.rated_power);
-            const dailyKwh = type === 'PV'
-                ? rated * SUN_HOURS * PR
-                : rated * WIND_CF * 24;
+            // ← NEW: pick correct avg based on type & settings.duration
+            const factor = type === 'PV'
+                ? (duration === 'month'
+                    ? lookup.avgIrrMonth
+                    : lookup.annIrrYear)
+                : (duration === 'month'
+                    ? lookup.avgWindMonth
+                    : lookup.annWindYear);
+
+            // now dailyKwh = rated_kW * average_kWh_per_kW_per_day
+            const dailyKwh = rated * factor;
             prodKwhTotal += dailyKwh;
             r.catalog.hourly_shape.forEach((f, idx) => prodHourly[idx] += f * dailyKwh);
             return { model: r.catalog.model_name, type, rated, kwh: dailyKwh.toFixed(2) };
@@ -333,112 +391,137 @@ export default function InfoPage() {
  * write to the database until “Apply Shift” is clicked.
  */
     async function runShifting() {
-        if (preview) return;  // already in preview
+        if (preview) return; // only one preview at a time
 
-        // 1) Build capacity curve: Production[h] + GRID_LIMIT
-        const capacity = hourSeries.map(p =>
-            GRID_LIMIT + p.Production - Math.max(0, p.EV)
-        );
+        const THRESHOLD = threshold; // in kW
 
+        // 1) capacity = Production + threshold
+        const capacity = hourSeries.map(p => p.Production + THRESHOLD);
 
-        // 2) Base load curve (kW)
+        // 2) flat array of today’s load
         const baseLoad = hourSeries.map(p => p.Load);
 
-        // 3) Quick exit if no peaks
-        if (baseLoad.every((kW, h) => kW <= capacity[h])) {
-            setSnack({ open: true, msg: 'No peaks – nothing to shift.', sev: 'info' });
+        // — NEW: compute cost before shift —
+        const costBefore = hourSeries.reduce((sum, { Load, Production, hour }) => {
+            const hr = parseInt(hour.slice(0, 2), 10);
+            const tariff = priceHr[hr];
+            return sum + Math.max(Load - Production, 0) * tariff;
+        }, 0);
+
+
+        // 3) check if any peak‐hour violation (17–21)
+        const peakHrs = [17, 18, 19, 20, 21];
+        if (!peakHrs.some(h => baseLoad[h] > capacity[h])) {
+            setSnack({ open: true, msg: 'No threshold violations – nothing to shift.', sev: 'info' });
             return;
         }
 
-        // Helper: remove/add a load interval (start/end in hours, power_rate in W)
+        // 4) build mutable copy & helpers
+        const shiftedHr = [...baseLoad];
         const addInterval = (arr, { power_rate, start, end }, sign) => {
-            const p = (power_rate / 1000) * sign; // to kW
+            const p = (power_rate / 1000) * sign;
             let s = start, e = end;
-            if (e <= s) e += 24;                  // wrap midnight
+            if (e <= s) e += 24;
             for (let h = s; h < e; h++) arr[h % 24] += p;
         };
-
-        // Helper: compute duration hours from time strings
-        const findDuration = (start, end) => {
-            let s = parseInt(start.slice(0, 2), 10);
-            let e = parseInt(end.slice(0, 2), 10) || 24;
-            return e <= s ? e + 24 - s : e - s;
+        const getDuration = (s, e) => {
+            const start = parseInt(s.slice(0, 2), 10);
+            let end = parseInt(e.slice(0, 2), 10) || 24;
+            return end <= start ? end + 24 - start : end - start;
         };
 
-        // 4) Prepare mutable arrays
-        const shiftedLoadHr = [...baseLoad];
-        const updates = [];
-        let movedCount = 0;
-
-        // 5) Sort flexible loads by priority desc, then power desc
-        const flexLoads = [...loadRows]
+        // 5) only non‐all‐day, priority>1
+        const flex = loadRows
             .filter(l => l.priority > 1 && !l.is_all_day)
-            .sort((a, b) => b.priority - a.priority || b.power - a.power);
+            .sort((a, b) => b.priority - a.priority);
 
-        // 6) Greedy placement loop
-        for (const l of flexLoads) {
-            // Remove original
-            addInterval(
-                shiftedLoadHr,
-                {
-                    power_rate: l.power_rate,
-                    start: parseInt(l.start_time.slice(0, 2), 10),
-                    end: parseInt(l.end_time.slice(0, 2), 10) || 24
-                },
-                -1
-            );
+        const updates = [];
+        const wrapSet = new Set();
+        let moved = 0;
 
-            const duration = findDuration(l.start_time, l.end_time);
-            const p_kW = l.power;
+        // 6) strip each out and re‐insert at 22:00 (ignore capacity for shift)
+        for (let l of flex) {
+            // remove its original interval
+            const orig = {
+                power_rate: l.power_rate,
+                start: parseInt(l.start_time.slice(0, 2), 10),
+                end: parseInt(l.end_time.slice(0, 2), 10) || 24
+            };
+            addInterval(shiftedHr, orig, -1);
 
-            // Try every possible start hour 0–23
-            for (let tryStart = 0; tryStart < 24; tryStart++) {
-                let fits = true;
-                for (let h = 0; h < duration; h++) {
-                    const idx = (tryStart + h) % 24;
-                    if (shiftedLoadHr[idx] + p_kW > capacity[idx]) { fits = false; break; }
+            // compute duration & new slot
+            const dur = getDuration(l.start_time, l.end_time);
+            const newStart = 22;
+            const newEnd = (newStart + dur) % 24;
+
+            // track wrap-around hours
+            if (newEnd <= newStart) {
+                for (let h = 0; h < newEnd +1 ; h++) {
+                    wrapSet.add(h);
                 }
-                if (!fits) continue;
-
-                // Found a slot—add it back
-                addInterval(
-                    shiftedLoadHr,
-                    { power_rate: l.power_rate, start: tryStart, end: (tryStart + duration) % 24 },
-                    +1
-                );
-
-                // Record update for “Apply Shift”
-                updates.push({
-                    id: l.id,
-                    start: `${String(tryStart).padStart(2, '0')}:00`,
-                    end: `${String((tryStart + duration) % 24).padStart(2, '0')}:00`
-                });
-                movedCount++;
-                break;
             }
+
+            // re-insert at 22:00
+            addInterval(
+                shiftedHr,
+                { power_rate: l.power_rate, start: newStart, end: newEnd },
+                +1
+            );
+            updates.push({
+                id: l.id,
+                start: '22:00',
+                end: String(newEnd).padStart(2, '0') + ':00'
+            });
+            moved++;
         }
 
-        // 7) Build preview series with the new shifted load curve
-        const previewSeries = hourSeries.map((p, h) => ({
-            ...p,
-            ShiftedLoad: +shiftedLoadHr[h].toFixed(2)
-        }));
+        // 7) build preview series for today
+        const previewSeries = [];
+        for (let h = 0; h < 24; h++) {
+            previewSeries.push({
+                hour: `${String(h).padStart(2, '0')}:00`,
+                Load: baseLoad[h],
+                ShiftedLoad: +shiftedHr[h].toFixed(2),
+                EV: hourSeries[h].EV,
+                Production: hourSeries[h].Production
+            });
+        }
 
-        // 8) Update state for chart preview
+        // 8) append tomorrow’s wrap‐around hours with “(T)”
+        Array.from(wrapSet)
+            .sort((a, b) => a - b)
+            .forEach(h => {
+                previewSeries.push({
+                    hour: `${String(h).padStart(2, '0')}:00 (T)`,
+                    Load: baseLoad[h],
+                    ShiftedLoad: +shiftedHr[h].toFixed(2),
+                    EV: hourSeries[h].EV,
+                    Production: hourSeries[h].Production
+                });
+            });
+
+
+        // — NEW: compute cost after shift —
+        const costAfter = previewSeries.reduce((sum, { ShiftedLoad, Production, hour }) => {
+            // strip out the "(T)" if present
+            const hr = parseInt(hour.slice(0, 2), 10);
+            const tariff = priceHr[hr];
+            return sum + Math.max(ShiftedLoad - Production, 0) * tariff;
+        }, 0);
+        // 9) stash into state & notify
         setHourSeries(previewSeries);
         setPreview({ series: previewSeries, updates });
-        const costAfter = previewSeries.reduce(
-            (sum, { ShiftedLoad, Production, hour }) =>
-                sum + Math.max(ShiftedLoad - Production, 0) * priceHr[+hour.slice(0, 2)],
-            0
-        );
-        setCosts(costs => ({ before: costs.before, after: +costAfter.toFixed(2) }));
+        setCosts({ before: +costBefore.toFixed(2), after: +costAfter.toFixed(2) });
         setSnack({
             open: true,
-            msg: `Shifted ${movedCount} load${movedCount === 1 ? '' : 's'} – preview only.`,
+            msg: `Shifted ${moved} load${moved === 1 ? '' : 's'} to 22:00.`,
             sev: 'success'
         });
     }
+
+
+
+
 
 
     async function applyShift() {
@@ -546,8 +629,7 @@ export default function InfoPage() {
                         </Typography>
                     </CardContent></Card>
                 </Grid>
-
-                {/* Tariff & Cost Summary */}
+                      {preview && (             
                 <Grid item xs={12}>
                     <Card sx={{ mb: 2 }}>
                         <CardContent>
@@ -562,6 +644,7 @@ export default function InfoPage() {
                         </CardContent>
                     </Card>
                 </Grid>
+                )}
 
                 {/* Combined hourly graph + shift button */}
                 <Grid item xs={12}>
@@ -596,7 +679,7 @@ export default function InfoPage() {
                             Run Load Shifting
                         </Button>
 
-                        {preview && (
+                        {/* {preview && (
                             <Button
                                 variant="contained"
                                 color="primary"
@@ -605,7 +688,7 @@ export default function InfoPage() {
                             >
                                 Apply Shift
                             </Button>
-                        )}
+                        )} */}
                     </CardContent></Card>
                 </Grid>
 
@@ -642,16 +725,18 @@ export default function InfoPage() {
                     </Card>
                 </Grid>
             </Grid>
-            <Grid item xs={12} sx={{ textAlign: 'right', my: 2 }}>
-                <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={openReportDialog}
-                    disabled={saving}
-                >
-                    {saving ? 'Saving…' : 'Save Report'}
-                </Button>
-            </Grid>
+            {preview && (
+                <Grid item xs={12} sx={{ textAlign: 'right', my: 2 }}>
+                    <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={openReportDialog}
+                        disabled={saving}
+                    >
+                        {saving ? 'Saving…' : 'Save Report'}
+                    </Button>
+                </Grid>
+            )}
             {/* Save Report Dialog */}
             <Dialog open={reportModalOpen} onClose={closeReportDialog} maxWidth="sm" fullWidth>
                 <DialogTitle>Save Current Report</DialogTitle>

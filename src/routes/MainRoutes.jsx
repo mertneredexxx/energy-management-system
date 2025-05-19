@@ -108,14 +108,14 @@ const MainRoutes = {
         </PrivateRoute>
       )
     },
-    {
-      path: '/export-data',
-      element: (
-        <PrivateRoute>
-          <ExportPage />
-        </PrivateRoute>
-      )
-    },
+    // {
+    //   path: '/export-data',
+    //   element: (
+    //     <PrivateRoute>
+    //       <ExportPage />
+    //     </PrivateRoute>
+    //   )
+    // },
      {
       path: '/reports-page',
       element: (

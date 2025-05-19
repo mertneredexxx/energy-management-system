@@ -15,7 +15,9 @@ import {
     TableBody,
     TableCell,
     DialogActions,
-    Button
+    Button,
+    Card,
+    CardContent
 } from '@mui/material';
 import {
     ResponsiveContainer,
@@ -29,7 +31,8 @@ import {
     ReferenceLine
 } from 'recharts';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 export default function CompareModal({
     open,
     onClose,
@@ -84,15 +87,44 @@ export default function CompareModal({
     );
 
     const handleDownload = async () => {
-        const el = ref.current;
-        const canvas = await html2canvas(el, { scale: 2 });
-        const img = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const w = pdf.internal.pageSize.getWidth();
-        const h = (canvas.height * w) / canvas.width;
-        pdf.addImage(img, 'PNG', 0, 0, w, h);
-        pdf.save(`compare_${reportA.name}_vs_${reportB.name}.pdf`);
-    };
+  const el = document.getElementById('compare-modal');
+  if (!el) return;
+
+  // Temporarily expand to full height
+  const orig = {
+    height:   el.style.height,
+    overflow: el.style.overflow,
+    scroll:   el.scrollTop
+  };
+  el.style.height   = `${el.scrollHeight}px`;
+  el.style.overflow = 'visible';
+  el.scrollTop      = 0;
+
+  // Render full content
+  const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+
+  // Restore original
+  el.style.height   = orig.height;
+  el.style.overflow = orig.overflow;
+  el.scrollTop      = orig.scroll;
+
+  // Convert to image data
+  const imgData = canvas.toDataURL('image/png');
+
+  // A4 width in mm
+  const pdfW = 210;
+  // Compute PDF height so image isn’t squashed
+  const pdfH = (canvas.height * pdfW) / canvas.width;
+
+  // Create one-page PDF of exact content size
+  const pdf = new jsPDF('p', 'mm', [pdfW, pdfH]);
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+
+  pdf.save(`compare_${reportA.name}_vs_${reportB.name}.pdf`);
+};
+
+
+
 
 
     const renderChart = (data, dataKey, title, threshold) => (
@@ -120,25 +152,106 @@ export default function CompareModal({
         </Box>
     );
 
-    const explain = () => {
-        const diffSavingsA = ((reportA.costs.before - reportA.costs.after) / reportA.costs.before) * 100;
-        const diffSavingsB = ((reportB.costs.before - reportB.costs.after) / reportB.costs.before) * 100;
-        return (
-            <>
-                <Typography paragraph>
-                    <strong>{reportA.name}</strong> ({reportA.season}) originally cost ₺{reportA.costs.before.toFixed(2)} and after shifting ₺{reportA.costs.after.toFixed(2)}, a reduction of {diffSavingsA.toFixed(1)}%.
-                    This was achieved under a threshold of {reportA.threshold_kw} kW peak capacity.
-                </Typography>
-                <Typography paragraph>
-                    <strong>{reportB.name}</strong> ({reportB.season}) originally cost ₺{reportB.costs.before.toFixed(2)} and after shifting ₺{reportB.costs.after.toFixed(2)}, a reduction of {diffSavingsB.toFixed(1)}%.
-                    Notice how the difference in season (“{reportB.season}”) and threshold ({reportB.threshold_kw} kW) changes the optimal shifting outcome.
-                </Typography>
-                <Typography paragraph>
-                    In the charts above, the red line is your original demand, the orange/red-outlined (ShiftedLoad) is your post-shifting demand, and the green is renewable production.  You can see that loads during your peak tariff windows have been moved into off-peak hours to reduce cost, while respecting each device’s duration and the fixed refrigerator base load.
-                </Typography>
-            </>
-        );
-    };
+   const explain = () => {
+  const lines = [];
+
+  // Threshold comparison
+  if (reportA.threshold_kw !== reportB.threshold_kw) {
+    lines.push(
+      <>
+        The peak-capacity threshold for <strong>{reportA.name}</strong> was configured at {reportA.threshold_kw} kW, 
+        whereas <strong>{reportB.name}</strong> increased this limit to {reportB.threshold_kw} kW to allow more headroom during peak tariff windows.
+      </>
+    );
+  } else {
+    lines.push(
+      <>
+        Both <strong>{reportA.name}</strong> and <strong>{reportB.name}</strong> share the same peak-capacity threshold of {reportA.threshold_kw} kW, 
+        ensuring a consistent constraint on maximum grid draw during peak hours.
+      </>
+    );
+  }
+
+  // Season comparison
+  if (reportA.season !== reportB.season) {
+    lines.push(
+      <>
+        <strong>{reportA.name}</strong> was analyzed under “{reportA.season}” tariff schedules, while <strong>{reportB.name}</strong> uses the “{reportB.season}” schedule, 
+        altering off-peak and peak definitions and thus impacting the cost-optimization strategy.
+      </>
+    );
+  } else {
+    lines.push(
+      <>
+        Both <strong>{reportA.name}</strong> and <strong>{reportB.name}</strong> are evaluated under the same “{reportA.season}” tariff season, 
+        keeping the tariff windows identical across comparisons.
+      </>
+    );
+  }
+
+  // Daily totals & renewables
+  lines.push(
+    <>
+      On <strong>{reportA.name}</strong>, the total aggregated daily demand reached <strong>{reportA.daily_total_load} kWh</strong>, 
+      while renewable generation supplied <strong>{reportA.total_renewable} kWh</strong>, demonstrating a net 
+      {(reportA.total_renewable - reportA.daily_total_load) >= 0 ? ' surplus.' : ' deficit.'}
+    </>
+  );
+
+  lines.push(
+    <>
+      Similarly, <strong>{reportB.name}</strong> shows <strong>{reportB.daily_total_load} kWh</strong> of daily load 
+      with <strong>{reportB.total_renewable} kWh</strong> from renewables, 
+      indicating how seasonal or configuration changes affect the balance between demand and on-site generation.
+    </>
+  );
+
+  // Loads & shifts
+  const shiftedA = reportA.schedule_rows.filter(r => r.oldStart !== r.newStart).length;
+  lines.push(
+    <>
+      In <strong>{reportA.name}</strong>, {reportA.loads.length} discrete loads were considered. 
+      Of these, <strong>{shiftedA}</strong> device{shiftedA !== 1 ? 's' : ''} were algorithmically shifted into the 22:00 off-peak window to shave peaks.
+    </>
+  );
+  const shiftedB = reportB.schedule_rows.filter(r => r.oldStart !== r.newStart).length;
+  lines.push(
+    <>
+      For <strong>{reportB.name}</strong>, {reportB.loads.length} loads were processed, with <strong>{shiftedB}</strong> shift operation
+      {shiftedB !== 1 ? 's' : ''} performed, showcasing how the revised threshold/season parameters influence rescheduling.
+    </>
+  );
+
+  // Costs & savings
+  const saveA = ((reportA.costs.before - reportA.costs.after) / reportA.costs.before * 100).toFixed(1);
+  lines.push(
+    <>
+      Cost analysis for <strong>{reportA.name}</strong> reveals an original billing of ₺{reportA.costs.before.toFixed(2)}, 
+      reduced to ₺{reportA.costs.after.toFixed(2)} after optimization — a savings of {saveA}%.
+    </>
+  );
+  const saveB = ((reportB.costs.before - reportB.costs.after) / reportB.costs.before * 100).toFixed(1);
+  lines.push(
+    <>
+      Under <strong>{reportB.name}</strong>, the cost dropped from ₺{reportB.costs.before.toFixed(2) + " "} 
+      to ₺{reportB.costs.after.toFixed(2)}, achieving a savings of {saveB}%.
+    </>
+  );
+
+  return (
+    <>
+      {lines.map((content, i) => (
+        <Typography key={i} paragraph>
+          {content}
+        </Typography>
+      ))}
+    </>
+  );
+};
+
+
+
+
 
     // 1) compute the names for easy diffing
     const namesA = reportA.loads.map(l => l.name);
@@ -159,7 +272,16 @@ export default function CompareModal({
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="xl">
             <DialogTitle>Compare Reports</DialogTitle>
-            <DialogContent dividers ref={ref}>
+            <DialogContent dividers id='compare-modal' >
+                <Grid item xs={12} md={6}>
+                    <Alert
+                        severity="warning"
+                        icon={<WarningAmberIcon fontSize="inherit" />}
+                        sx={{ '& .MuiAlert-message': { whiteSpace: 'pre-wrap' } }}  // preserves line breaks
+                    >
+                        {informationText}
+                    </Alert>
+                </Grid>
                 <Grid container spacing={4}>
 
                     {/** --- Column A --- **/}
@@ -187,6 +309,10 @@ export default function CompareModal({
                                 </Typography>
                             )}
                         </Grid>
+                        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                            Total Load : {reportA.daily_total_load} kWh
+                        </Typography>
+                        <Divider sx={{ my: 2 }} />
                         <Typography variant="subtitle1">☀️ Renewables</Typography>
                         <Grid style={{ minHeight: '400px' }}>
                             {renderTable(reportA.renewables, [
@@ -200,6 +326,10 @@ export default function CompareModal({
                                 </Typography>
                             )}
                         </Grid>
+                        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                            Total Energy Production : {reportA.total_renewable} kWh
+                        </Typography>
+                        <Divider sx={{ my: 2 }} />
                         {reportA.ev_session && <>
                             <Divider sx={{ my: 2 }} />
                             <Typography variant="subtitle1">🔋 EV Session</Typography>
@@ -241,6 +371,10 @@ export default function CompareModal({
                                 </Typography>
                             )}
                         </Grid>
+                        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                            Total Load : {reportB.daily_total_load} kWh
+                        </Typography>
+                        <Divider sx={{ my: 2 }} />
                         <Typography variant="subtitle1">☀️ Renewables</Typography>
                         <Grid style={{ minHeight: '400px' }}>
                             {renderTable(reportB.renewables, [
@@ -254,7 +388,10 @@ export default function CompareModal({
                                 </Typography>
                             )}
                         </Grid>
-
+                        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                            Total Energy Production : {reportB.total_renewable} kWh
+                        </Typography>
+                        <Divider sx={{ my: 2 }} />
                         {reportB.ev_session && <>
                             <Divider sx={{ my: 2 }} />
                             <Typography variant="subtitle1">🔋 EV Session</Typography>
@@ -279,6 +416,46 @@ export default function CompareModal({
                         <Divider sx={{ my: 2 }} />
                         <Typography variant="h6" gutterBottom>{reportA.name} – Shifted vs Production</Typography>
                         {renderChart(reportA.hour_series_shifted, 'ShiftedLoad', 'Shifted Demand', reportA.threshold_kw)}
+                        <Divider sx={{ my: 2 }} />
+                        <Grid style={{ minHeight: '400px' }}>
+                            <Grid item xs={12} sx={{ mt: 3 }}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography variant="h6" gutterBottom>
+                                            {'Shift Preview Schedule'}
+                                        </Typography>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Device</TableCell>
+                                                    <TableCell>Old Start</TableCell>
+                                                    <TableCell>Old End</TableCell>
+                                                    <TableCell>New Start</TableCell>
+                                                    <TableCell>New End</TableCell>
+                                                    <TableCell>Run All Day</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {reportA?.schedule_rows.map(r => (
+                                                    <TableRow key={r.id}>
+                                                        <TableCell>{r.name}</TableCell>
+                                                        <TableCell>{r.oldStart}</TableCell>
+                                                        <TableCell>{r.oldEnd}</TableCell>
+                                                        <TableCell>{r.newStart}</TableCell>
+                                                        <TableCell>{r.newEnd}</TableCell>
+                                                        <TableCell>
+                                                            {r.isAllDay ? (
+                                                                <span role="img" aria-label="tick">✔️</span>
+                                                            ) : null}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        </Grid>
                     </Grid>
 
                     {/* Report B */}
@@ -288,6 +465,46 @@ export default function CompareModal({
                         <Divider sx={{ my: 2 }} />
                         <Typography variant="h6" gutterBottom>{reportB.name} – Shifted vs Production</Typography>
                         {renderChart(reportB.hour_series_shifted, 'ShiftedLoad', 'Shifted Demand', reportB.threshold_kw)}
+                        <Divider sx={{ my: 2 }} />
+                        <Grid style={{ minHeight: '400px' }}>
+                            <Grid item xs={12} sx={{ mt: 3 }}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography variant="h6" gutterBottom>
+                                            {'Shift Preview Schedule'}
+                                        </Typography>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Device</TableCell>
+                                                    <TableCell>Old Start</TableCell>
+                                                    <TableCell>Old End</TableCell>
+                                                    <TableCell>New Start</TableCell>
+                                                    <TableCell>New End</TableCell>
+                                                    <TableCell>Run All Day</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {reportB?.schedule_rows.map(r => (
+                                                    <TableRow key={r.id}>
+                                                        <TableCell>{r.name}</TableCell>
+                                                        <TableCell>{r.oldStart}</TableCell>
+                                                        <TableCell>{r.oldEnd}</TableCell>
+                                                        <TableCell>{r.newStart}</TableCell>
+                                                        <TableCell>{r.newEnd}</TableCell>
+                                                        <TableCell>
+                                                            {r.isAllDay ? (
+                                                                <span role="img" aria-label="tick">✔️</span>
+                                                            ) : null}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        </Grid>
                     </Grid>
 
                     {/* Explanations */}
@@ -303,12 +520,10 @@ export default function CompareModal({
                 {/** --- Narrative of differences --- **/}
                 <Box>
                     <Typography variant="h6" gutterBottom>What Changed?</Typography>
-                    {diffLine('Threshold (kW)', reportA.home_settings.threshold, reportB.home_settings.threshold)}
+                    {diffLine('Threshold (kW)', reportA.home_settings.threshold_kw, reportB.home_settings.threshold_kw)}
                     {diffLine('Season', reportA.home_settings.season, reportB.home_settings.season)}
                     {diffLine('Number of Loads', reportA.loads.length, reportB.loads.length)}
                     {diffLine('Number of Renewables', reportA.renewables.length, reportB.renewables.length)}
-                    {diffLine('Cost Before Shift (₺)', reportA.costs.before.toFixed(2), reportB.costs.before.toFixed(2))}
-                    {diffLine('Cost After Shift (₺)', reportA.costs.after.toFixed(2), reportB.costs.after.toFixed(2))}
                 </Box>
             </DialogContent>
 

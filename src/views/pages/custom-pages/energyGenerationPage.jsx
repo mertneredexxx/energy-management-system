@@ -127,23 +127,7 @@ export default function EnergyGeneration() {
                                     <TableCell>{row.catalog.renewable_type}</TableCell>
                                     <TableCell>{row.rated_power}</TableCell>
                                     <TableCell align="right">
-                                        <MuiIconButton
-                                            size="small"
-                                            onClick={async () => {
-                                                const { data: [cat] } = await supabase
-                                                    .from('renewable_catalog')
-                                                    .select('model_name, renewable_type, hourly_shape')
-                                                    .eq('id', row.catalog_id);                      // row = selection
-
-                                                const series = buildHourlySeries(
-                                                    cat.hourly_shape, row.rated_power, cat.renewable_type
-                                                );
-
-                                                setOpenChart({ open: true, hourly: series, modelName: cat.model_name });
-                                            }}
-                                        >
-                                            <ShowChartIcon fontSize="small" />
-                                        </MuiIconButton>
+                                        
 
                                         <IconButton size="small" onClick={() => deleteSource(row.id)}>
                                             <DeleteIcon fontSize="small" />
