@@ -53,7 +53,7 @@ export default function CompareModal({
         "- Wind (One Month): 7.2 m/s\n" +
         "- Solar (One Year): 4.8 kWh/m²/day\n" +
         "- Wind (One Year): 6.5 m/s\n\n" +
-        "Tariff (₺/kWh) For Summer: Off-Peak 00–06 & 22–24=0.30 · Mid-Peak 06–17=1.00 · Peak 17–22=1.60\n\n" +
+        "Tariff (₺/kWh) For Summer: Off-Peak 00–07 & 22–24=0.30 · Mid-Peak 07–17=1.00 · Peak 17–22=1.60\n\n" +
         "Tariff (₺/kWh) For Winter: Off-Peak 00–06 & 22–24=0.35 · Mid-Peak 06–17=0.90 · Peak 17–22=1.40\n\n" +
         "These values are approximations and may not reflect actual conditions. Please ensure that you validate these values against your specific use case or consult with an expert for accurate analysis.\n\n"
     );

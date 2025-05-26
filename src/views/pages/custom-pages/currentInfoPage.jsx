@@ -643,7 +643,7 @@ export default function InfoPage() {
                             <Typography variant="subtitle1">
                                 <strong>Tariff (₺/kWh):</strong>{' '}
                                 {homeSettings?.season === 'summer'
-                                    ? 'Off-Peak 00–07 & 23–24=0.30 · Mid-Peak 07–17=1.00 · Peak 17–22=1.60'
+                                    ? 'Off-Peak 00–07 & 22–24=0.30 · Mid-Peak 07–17=1.00 · Peak 17–22=1.60'
                                     : 'Off-Peak 00–06 & 22–24=0.35 · Mid-Peak 06–17=0.90 · Peak 17–22=1.40'}
                             </Typography>
                             <Typography variant="subtitle1">Cost Before Shift: ₺{costs.before.toFixed(2)}</Typography>
