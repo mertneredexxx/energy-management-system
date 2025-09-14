@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
   const API_URL = `${env.VITE_APP_BASE_NAME}` || '/energy-management-system';
   const PORT = 3000;
 
+  // Use different base for development vs production
+  const base = mode === 'development' ? '/' : API_URL;
+
   return {
     server: {
       // this ensures that the browser opens upon server start
@@ -44,7 +47,7 @@ export default defineConfig(({ mode }) => {
         '@tabler/icons-react': '@tabler/icons-react/dist/esm/icons/index.mjs'
       }
     },
-    base: API_URL,
+    base: base,
     plugins: [react(), jsconfigPaths()]
   };
 });
