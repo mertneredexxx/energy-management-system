@@ -164,7 +164,7 @@ export default function NotificationList() {
           }
         >
           <ListItemAvatar>
-            <Avatar alt="John Doe"  />
+            <Avatar alt="John Doe" />
           </ListItemAvatar>
           <ListItemText primary={<Typography variant="subtitle1">John Doe</Typography>} />
         </ListItem>

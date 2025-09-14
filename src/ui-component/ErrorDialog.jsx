@@ -1,13 +1,5 @@
 import React, { forwardRef } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Slide,
-  Button,
-  Typography
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Slide, Button, Typography } from '@mui/material';
 
 const Transition = forwardRef(function Transition(props, ref) {
   return <Slide direction="down" ref={ref} {...props} />;
@@ -15,13 +7,7 @@ const Transition = forwardRef(function Transition(props, ref) {
 
 export default function ErrorDialog({ open, message, onClose }) {
   return (
-    <Dialog
-      open={open}
-      TransitionComponent={Transition}
-      keepMounted
-      onClose={onClose}
-      aria-describedby="error-dialog-description"
-    >
+    <Dialog open={open} TransitionComponent={Transition} keepMounted onClose={onClose} aria-describedby="error-dialog-description">
       <DialogTitle sx={{ fontWeight: 'bold', color: 'error.main' }}>Error</DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ mt: 1 }}>

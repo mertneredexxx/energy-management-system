@@ -65,41 +65,37 @@ export default function ScheduledDevicesTable() {
 
   useEffect(() => {
     async function fetchData() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
       setUser(user);
       if (!user) return;
 
       // fetch loads
-      const { data: loads, error: loadErr } = await supabase
-        .from('loads')
-        .select('*')
-        .eq('user_id', user.id);
+      const { data: loads, error: loadErr } = await supabase.from('loads').select('*').eq('user_id', user.id);
       if (!loadErr) setScheduledLoads(loads || []);
 
       // fetch EV sessions
-      const { data: evData, error: evErr } = await supabase
-        .from('ev_sessions')
-        .select('*')
-        .eq('user_id', user.id);
+      const { data: evData, error: evErr } = await supabase.from('ev_sessions').select('*').eq('user_id', user.id);
       if (!evErr) setEvSessions(evData || []);
     }
     fetchData();
   }, []);
 
-  const handleDeleteLoad = async id => {
+  const handleDeleteLoad = async (id) => {
     try {
       await supabase.from('loads').delete().eq('id', id);
-      setScheduledLoads(sl => sl.filter(l => l.id !== id));
+      setScheduledLoads((sl) => sl.filter((l) => l.id !== id));
       setSnackbar({ open: true, message: 'Load deleted successfully!', severity: 'success' });
     } catch (error) {
       setSnackbar({ open: true, message: 'Failed to delete load.', severity: 'error' });
     }
   };
 
-  const handleDeleteEv = async id => {
+  const handleDeleteEv = async (id) => {
     try {
       await supabase.from('ev_sessions').delete().eq('id', id);
-      setEvSessions(ev => ev.filter(e => e.id !== id));
+      setEvSessions((ev) => ev.filter((e) => e.id !== id));
       setSnackbar({ open: true, message: 'EV session deleted successfully!', severity: 'success' });
     } catch (error) {
       setSnackbar({ open: true, message: 'Failed to delete EV session.', severity: 'error' });
@@ -122,10 +118,10 @@ export default function ScheduledDevicesTable() {
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header Section */}
       <Box sx={{ mb: 4 }}>
-        <Typography 
-          variant="h3" 
-          component="h1" 
-          sx={{ 
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{
             fontWeight: 700,
             color: 'primary.main',
             mb: 1,
@@ -154,17 +150,12 @@ export default function ScheduledDevicesTable() {
               <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.primary' }}>
                 EV Charging Sessions
               </Typography>
-              <Chip 
-                label={evSessions.length} 
-                color="success" 
-                size="small" 
-                sx={{ ml: 'auto', fontWeight: 600 }}
-              />
+              <Chip label={evSessions.length} color="success" size="small" sx={{ ml: 'auto', fontWeight: 600 }} />
             </Box>
 
-            <TableContainer 
-              component={Paper} 
-              sx={{ 
+            <TableContainer
+              component={Paper}
+              sx={{
                 borderRadius: 2,
                 border: '1px solid',
                 borderColor: 'divider',
@@ -200,11 +191,11 @@ export default function ScheduledDevicesTable() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {evSessions.map(ev => (
-                    <TableRow 
+                  {evSessions.map((ev) => (
+                    <TableRow
                       key={ev.id}
-                      sx={{ 
-                        '&:hover': { 
+                      sx={{
+                        '&:hover': {
                           bgcolor: 'action.hover',
                           '& .action-btn': {
                             opacity: 1
@@ -217,30 +208,15 @@ export default function ScheduledDevicesTable() {
                       }}
                     >
                       <TableCell>
-                        <Chip 
-                          label={`${ev.charging_rate} kW`} 
-                          color="success" 
-                          variant="outlined"
-                          size="small"
-                        />
+                        <Chip label={`${ev.charging_rate} kW`} color="success" variant="outlined" size="small" />
                       </TableCell>
                       <TableCell sx={{ fontWeight: 500 }}>{ev.plug_in_time}</TableCell>
                       <TableCell sx={{ fontWeight: 500 }}>{ev.plug_out_time}</TableCell>
                       <TableCell>
-                        <Chip 
-                          label={`${ev.initial_soc}%`} 
-                          color="info" 
-                          variant="outlined"
-                          size="small"
-                        />
+                        <Chip label={`${ev.initial_soc}%`} color="info" variant="outlined" size="small" />
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          label={`${ev.final_soc}%`} 
-                          color="primary" 
-                          variant="outlined"
-                          size="small"
-                        />
+                        <Chip label={`${ev.final_soc}%`} color="primary" variant="outlined" size="small" />
                       </TableCell>
                       <TableCell align="center">
                         <Tooltip title="View Details">
@@ -248,7 +224,7 @@ export default function ScheduledDevicesTable() {
                             className="action-btn"
                             size="small"
                             onClick={() => openDetails(ev, true)}
-                            sx={{ 
+                            sx={{
                               color: 'primary.main',
                               '&:hover': { bgcolor: 'primary.light', color: 'white' }
                             }}
@@ -276,18 +252,13 @@ export default function ScheduledDevicesTable() {
             <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.primary' }}>
               Daily Load Schedule
             </Typography>
-            <Chip 
-              label={scheduledLoads.length} 
-              color="primary" 
-              size="small" 
-              sx={{ ml: 'auto', fontWeight: 600 }}
-            />
+            <Chip label={scheduledLoads.length} color="primary" size="small" sx={{ ml: 'auto', fontWeight: 600 }} />
           </Box>
 
           {scheduledLoads.length > 0 ? (
-            <TableContainer 
-              component={Paper} 
-              sx={{ 
+            <TableContainer
+              component={Paper}
+              sx={{
                 borderRadius: 2,
                 border: '1px solid',
                 borderColor: 'divider',
@@ -329,11 +300,11 @@ export default function ScheduledDevicesTable() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {scheduledLoads.map(load => (
-                    <TableRow 
+                  {scheduledLoads.map((load) => (
+                    <TableRow
                       key={load.id}
-                      sx={{ 
-                        '&:hover': { 
+                      sx={{
+                        '&:hover': {
                           bgcolor: 'action.hover',
                           '& .action-btn': {
                             opacity: 1
@@ -347,11 +318,11 @@ export default function ScheduledDevicesTable() {
                     >
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar 
-                            sx={{ 
-                              width: 32, 
-                              height: 32, 
-                              bgcolor: 'primary.light', 
+                          <Avatar
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              bgcolor: 'primary.light',
                               color: 'primary.main',
                               mr: 2,
                               fontSize: '0.875rem'
@@ -359,34 +330,17 @@ export default function ScheduledDevicesTable() {
                           >
                             <DevicesIcon fontSize="small" />
                           </Avatar>
-                          <Typography sx={{ fontWeight: 500 }}>
-                            {load.device_name}
-                          </Typography>
+                          <Typography sx={{ fontWeight: 500 }}>{load.device_name}</Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          label={`${load.power_rate} W`} 
-                          color="warning" 
-                          variant="outlined"
-                          size="small"
-                        />
+                        <Chip label={`${load.power_rate} W`} color="warning" variant="outlined" size="small" />
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          label={load.start_time} 
-                          color="info" 
-                          variant="outlined"
-                          size="small"
-                        />
+                        <Chip label={load.start_time} color="info" variant="outlined" size="small" />
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          label={load.end_time} 
-                          color="secondary" 
-                          variant="outlined"
-                          size="small"
-                        />
+                        <Chip label={load.end_time} color="secondary" variant="outlined" size="small" />
                       </TableCell>
                       <TableCell align="center">
                         <Stack direction="row" spacing={1} justifyContent="center">
@@ -395,7 +349,7 @@ export default function ScheduledDevicesTable() {
                               className="action-btn"
                               size="small"
                               onClick={() => openDetails(load, false)}
-                              sx={{ 
+                              sx={{
                                 color: 'primary.main',
                                 '&:hover': { bgcolor: 'primary.light', color: 'white' }
                               }}
@@ -408,7 +362,7 @@ export default function ScheduledDevicesTable() {
                               className="action-btn"
                               size="small"
                               onClick={() => handleDeleteLoad(load.id)}
-                              sx={{ 
+                              sx={{
                                 color: 'error.main',
                                 '&:hover': { bgcolor: 'error.light', color: 'white' }
                               }}
@@ -424,14 +378,16 @@ export default function ScheduledDevicesTable() {
               </Table>
             </TableContainer>
           ) : (
-            <Box sx={{ 
-              textAlign: 'center', 
-              py: 6,
-              background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-              borderRadius: 3,
-              border: '2px dashed',
-              borderColor: 'divider'
-            }}>
+            <Box
+              sx={{
+                textAlign: 'center',
+                py: 6,
+                background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                borderRadius: 3,
+                border: '2px dashed',
+                borderColor: 'divider'
+              }}
+            >
               <DevicesIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 600 }}>
                 No scheduled devices found
@@ -445,8 +401,8 @@ export default function ScheduledDevicesTable() {
       </Card>
 
       {/* Enhanced Details Modal */}
-      <Modal 
-        open={detailsOpen} 
+      <Modal
+        open={detailsOpen}
         onClose={closeDetails}
         closeAfterTransition
         BackdropComponent={Backdrop}
@@ -461,11 +417,13 @@ export default function ScheduledDevicesTable() {
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar sx={{ 
-                      bgcolor: isEv ? 'success.light' : 'primary.light', 
-                      color: isEv ? 'success.main' : 'primary.main',
-                      mr: 2 
-                    }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: isEv ? 'success.light' : 'primary.light',
+                        color: isEv ? 'success.main' : 'primary.main',
+                        mr: 2
+                      }}
+                    >
                       {isEv ? <ElectricCarIcon /> : <DevicesIcon />}
                     </Avatar>
                     <Typography variant="h5" sx={{ fontWeight: 700 }}>
@@ -482,26 +440,30 @@ export default function ScheduledDevicesTable() {
                 <Stack spacing={3}>
                   {isEv ? (
                     <>
-                      <Box sx={{ 
-                        p: 2, 
-                        bgcolor: 'success.light', 
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'success.main'
-                      }}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          bgcolor: 'success.light',
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'success.main'
+                        }}
+                      >
                         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
                           <FlashIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                           Charging Rate: {selectedItem.charging_rate} kW
                         </Typography>
                       </Box>
-                      
-                      <Box sx={{ 
-                        p: 2, 
-                        bgcolor: 'info.light', 
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'info.main'
-                      }}>
+
+                      <Box
+                        sx={{
+                          p: 2,
+                          bgcolor: 'info.light',
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'info.main'
+                        }}
+                      >
                         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
                           <AccessTimeIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                           Plug-in Time: {selectedItem.plug_in_time}
@@ -512,13 +474,15 @@ export default function ScheduledDevicesTable() {
                         </Typography>
                       </Box>
 
-                      <Box sx={{ 
-                        p: 2, 
-                        bgcolor: 'warning.light', 
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'warning.main'
-                      }}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          bgcolor: 'warning.light',
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'warning.main'
+                        }}
+                      >
                         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
                           Initial SoC: {selectedItem.initial_soc}%
                         </Typography>
@@ -532,26 +496,30 @@ export default function ScheduledDevicesTable() {
                     </>
                   ) : (
                     <>
-                      <Box sx={{ 
-                        p: 2, 
-                        bgcolor: 'primary.light', 
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'primary.main'
-                      }}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          bgcolor: 'primary.light',
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'primary.main'
+                        }}
+                      >
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                           <PowerIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                           Power Rate: {selectedItem.power_rate} W
                         </Typography>
                       </Box>
-                      
-                      <Box sx={{ 
-                        p: 2, 
-                        bgcolor: 'secondary.light', 
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'secondary.main'
-                      }}>
+
+                      <Box
+                        sx={{
+                          p: 2,
+                          bgcolor: 'secondary.light',
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'secondary.main'
+                        }}
+                      >
                         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
                           <ScheduleIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                           Start Time: {selectedItem.start_time}
@@ -565,13 +533,15 @@ export default function ScheduledDevicesTable() {
                   )}
 
                   {selectedItem.created_at && (
-                    <Box sx={{ 
-                      p: 2, 
-                      bgcolor: 'grey.100', 
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'grey.300'
-                    }}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        bgcolor: 'grey.100',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'grey.300'
+                      }}
+                    >
                       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                         <InfoIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1rem' }} />
                         Created: {new Date(selectedItem.created_at).toLocaleString()}
@@ -583,7 +553,7 @@ export default function ScheduledDevicesTable() {
                 <Button
                   variant="contained"
                   fullWidth
-                  sx={{ 
+                  sx={{
                     mt: 4,
                     py: 1.5,
                     borderRadius: 2,
@@ -591,7 +561,7 @@ export default function ScheduledDevicesTable() {
                     fontWeight: 600,
                     background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
                     '&:hover': {
-                      background: 'linear-gradient(45deg, #1565c0, #1976d2)',
+                      background: 'linear-gradient(45deg, #1565c0, #1976d2)'
                     }
                   }}
                   onClick={closeDetails}
@@ -605,14 +575,14 @@ export default function ScheduledDevicesTable() {
       </Modal>
 
       {/* Snackbar for notifications */}
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={4000} 
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
           variant="filled"
           sx={{ width: '100%', borderRadius: 2 }}

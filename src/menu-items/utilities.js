@@ -1,11 +1,11 @@
-import { 
-  IconTypography, 
-  IconPalette, 
-  IconShadow, 
+import {
+  IconTypography,
+  IconPalette,
+  IconShadow,
   IconWindmill,
-  IconChartBar,    // for graphs
+  IconChartBar, // for graphs
   IconDeviceLaptop, // for chosen devices (optional alternative)
-  IconHome         // for home settings (optional alternative)
+  IconHome // for home settings (optional alternative)
 } from '@tabler/icons-react';
 
 const icons = {
@@ -13,7 +13,7 @@ const icons = {
   IconPalette,
   IconShadow,
   IconWindmill,
-  IconChartBar,    // added icon for graphs
+  IconChartBar, // added icon for graphs
   IconDeviceLaptop,
   IconHome
 };
@@ -28,7 +28,7 @@ const utilities = {
       title: 'Current Information',
       type: 'item',
       url: '/current-info',
-      icon: icons.IconChartBar,   // or you might try icons.IconDeviceLaptop
+      icon: icons.IconChartBar, // or you might try icons.IconDeviceLaptop
       breadcrumbs: false
     },
     // {
@@ -44,7 +44,7 @@ const utilities = {
       title: 'Loads',
       type: 'item',
       url: '/loads',
-      icon: icons.IconDeviceLaptop,   // or you might try icons.IconDeviceLaptop
+      icon: icons.IconDeviceLaptop, // or you might try icons.IconDeviceLaptop
       breadcrumbs: false
     },
     {
@@ -52,7 +52,7 @@ const utilities = {
       title: 'Home Settings',
       type: 'item',
       url: '/home-settings',
-      icon: icons.IconShadow,   // or consider icons.IconHome / icons.IconSettings
+      icon: icons.IconShadow, // or consider icons.IconHome / icons.IconSettings
       breadcrumbs: false
     },
     // {
@@ -68,7 +68,7 @@ const utilities = {
       title: 'Reports',
       type: 'item',
       url: '/reports-page',
-      icon: icons.IconDeviceLaptop,   // or you might try icons.IconDeviceLaptop
+      icon: icons.IconDeviceLaptop, // or you might try icons.IconDeviceLaptop
       breadcrumbs: false
     }
   ]

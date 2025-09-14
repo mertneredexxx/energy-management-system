@@ -14,14 +14,7 @@ import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import { 
-    Paper, 
-    CircularProgress, 
-    Alert,
-    Fade,
-    Stack,
-    Divider
-} from '@mui/material';
+import { Paper, CircularProgress, Alert, Fade, Stack, Divider } from '@mui/material';
 import { supabase } from '../../../api/supabaseClient';
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
@@ -47,7 +40,7 @@ export default function AuthLogin() {
   const [password, setPassword] = useState('');
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  
+
   // login handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,11 +75,11 @@ export default function AuthLogin() {
         {/* Email Field */}
         <FormControl fullWidth>
           <InputLabel htmlFor="outlined-adornment-email-login">Email Address</InputLabel>
-          <OutlinedInput 
-            id="outlined-adornment-email-login" 
-            type="email" 
-            value={email} 
-            name="email" 
+          <OutlinedInput
+            id="outlined-adornment-email-login"
+            type="email"
+            value={email}
+            name="email"
             onChange={(e) => setEmail(e.target.value)}
             startAdornment={
               <InputAdornment position="start">
@@ -164,11 +157,11 @@ export default function AuthLogin() {
           <Grid>
             <FormControlLabel
               control={
-                <Checkbox 
-                  checked={checked} 
-                  onChange={(event) => setChecked(event.target.checked)} 
-                  name="checked" 
-                  color="primary" 
+                <Checkbox
+                  checked={checked}
+                  onChange={(event) => setChecked(event.target.checked)}
+                  name="checked"
+                  color="primary"
                   sx={{
                     '&.Mui-checked': {
                       color: 'primary.main'
@@ -184,11 +177,11 @@ export default function AuthLogin() {
             />
           </Grid>
           <Grid>
-            <Typography 
-              variant="body2" 
-              component={Link} 
-              to="/forgot-password" 
-              sx={{ 
+            <Typography
+              variant="body2"
+              component={Link}
+              to="/forgot-password"
+              sx={{
                 color: 'primary.main',
                 textDecoration: 'none',
                 fontWeight: 500,
@@ -205,12 +198,12 @@ export default function AuthLogin() {
         {/* Login Button */}
         <Box sx={{ mt: 3 }}>
           <AnimateButton>
-            <Button 
-              onClick={(e) => handleSubmit(e)} 
-              color="primary" 
-              fullWidth 
-              size="large" 
-              type="submit" 
+            <Button
+              onClick={(e) => handleSubmit(e)}
+              color="primary"
+              fullWidth
+              size="large"
+              type="submit"
               variant="contained"
               disabled={loading || !email || !password}
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LoginIcon />}
@@ -248,11 +241,11 @@ export default function AuthLogin() {
         <Box sx={{ textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary">
             Don't have an account?{' '}
-            <Typography 
-              component={Link} 
-              to="/register" 
+            <Typography
+              component={Link}
+              to="/register"
               variant="body2"
-              sx={{ 
+              sx={{
                 color: 'primary.main',
                 textDecoration: 'none',
                 fontWeight: 600,
@@ -267,11 +260,7 @@ export default function AuthLogin() {
         </Box>
       </Stack>
 
-      <ErrorDialog
-        open={errorDialogOpen}
-        message={errorMsg}
-        onClose={() => setErrorDialogOpen(false)}
-      />
+      <ErrorDialog open={errorDialogOpen} message={errorMsg} onClose={() => setErrorDialogOpen(false)} />
     </Box>
   );
 }

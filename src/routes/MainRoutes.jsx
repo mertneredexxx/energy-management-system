@@ -20,7 +20,7 @@ const Register = Loadable(lazy(() => import('views/pages/authentication/Register
 const HomeSettingsPage = Loadable(lazy(() => import('views/pages/custom-pages/homeSettings')));
 const LoadsScreen = Loadable(lazy(() => import('views/pages/custom-pages/loadsPage')));
 const DevicesScreen = Loadable(lazy(() => import('views/pages/custom-pages/devicesPage')));
-
+const SurveyPage = Loadable(lazy(() => import('views/pages/custom-pages/surveyPage')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -116,7 +116,7 @@ const MainRoutes = {
     //     </PrivateRoute>
     //   )
     // },
-     {
+    {
       path: '/reports-page',
       element: (
         <PrivateRoute>
@@ -132,6 +132,14 @@ const MainRoutes = {
         </PrivateRoute>
       )
     },
+    {
+      path: '/survey',
+      element: (
+        <PrivateRoute>
+          <SurveyPage />
+        </PrivateRoute>
+      )
+    }
     // {
     //   path: '/graphs',
     //   element: (

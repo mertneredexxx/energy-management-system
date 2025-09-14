@@ -31,9 +31,5 @@ export default function Customization() {
     setOpen(!open);
   };
 
-  return (
-    <>
-     
-    </>
-  );
+  return <></>;
 }

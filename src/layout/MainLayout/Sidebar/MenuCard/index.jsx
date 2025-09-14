@@ -82,8 +82,7 @@ function MenuCard() {
           right: -96
         }
       }}
-    >
-    </Card>
+    ></Card>
   );
 }
 

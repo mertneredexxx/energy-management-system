@@ -1,25 +1,8 @@
 /* eslint-disable prettier/prettier */
-import { useEffect, useState } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  LineChart,
-  Line,
-  ResponsiveContainer,
-} from "recharts";
-import {
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  CircularProgress,
-} from "@mui/material";
-import { supabase } from "../../../api/supabaseClient";
+import { useEffect, useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, ResponsiveContainer } from 'recharts';
+import { Card, CardContent, Typography, Grid, CircularProgress } from '@mui/material';
+import { supabase } from '../../../api/supabaseClient';
 
 /**
  * GraphsPage
@@ -36,22 +19,23 @@ export default function GraphsPage() {
 
   useEffect(() => {
     async function retrieveUser() {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUserId(user.id);
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      setUserId(user.id);
     }
 
     retrieveUser();
   }, []);
-
 
   useEffect(() => {
     async function fetchLoads() {
       if (!userId) return;
 
       const { data, error } = await supabase
-        .from("loads")
-        .select("id, device_name, power_rate, start_time, end_time")
-        .eq("user_id", userId);
+        .from('loads')
+        .select('id, device_name, power_rate, start_time, end_time')
+        .eq('user_id', userId);
 
       if (!error) setLoads(data);
       setLoading(false);
@@ -63,7 +47,7 @@ export default function GraphsPage() {
   /* ---------------- helpers -------------------- */
   const barData = loads.map((l) => ({
     name: l.device_name,
-    power: l.power_rate,
+    power: l.power_rate
   }));
 
   const lineData = (() => {
@@ -80,8 +64,8 @@ export default function GraphsPage() {
     });
 
     return hourly.map((w, idx) => ({
-      hour: `${idx.toString().padStart(2, "0")}:00`,
-      power: w,
+      hour: `${idx.toString().padStart(2, '0')}:00`,
+      power: w
     }));
   })();
 
@@ -107,7 +91,7 @@ export default function GraphsPage() {
               <BarChart data={barData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" interval={0} angle={-35} textAnchor="end" height={70} />
-                <YAxis label={{ value: "Power (W)", angle: -90, position: "insideLeft" }} />
+                <YAxis label={{ value: 'Power (W)', angle: -90, position: 'insideLeft' }} />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="power" name="Power (W)" />
@@ -128,7 +112,7 @@ export default function GraphsPage() {
               <LineChart data={lineData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="hour" />
-                <YAxis label={{ value: "Power (W)", angle: -90, position: "insideLeft" }} />
+                <YAxis label={{ value: 'Power (W)', angle: -90, position: 'insideLeft' }} />
                 <Tooltip />
                 <Legend />
                 <Line type="monotone" dataKey="power" name="Total Power (W)" dot={false} />

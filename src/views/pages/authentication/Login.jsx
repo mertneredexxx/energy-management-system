@@ -20,8 +20,6 @@ import { useState } from 'react';
 export default function Login() {
   const downMD = useMediaQuery((theme) => theme.breakpoints.down('md'));
 
-
-
   return (
     <AuthWrapper1>
       <Grid container direction="column" sx={{ justifyContent: 'flex-end', minHeight: '100vh' }}>

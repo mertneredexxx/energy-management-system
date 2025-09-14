@@ -37,20 +37,16 @@ export default function ProfileSection() {
       } = await supabase.auth.getUser();
       if (error || !user) return;
       // try to read a full_name or name from user_metadata, fallback to email
-      const fullName =
-        user.user_metadata?.first_name ||
-        user.user_metadata?.name ||
-        user.email ||
-        '';
+      const fullName = user.user_metadata?.first_name || user.user_metadata?.name || user.email || '';
       // you could also fetch a profile table for a role, etc.
       setProfile({ fullName, email: user.email, role: 'Project Admin' });
     })();
   }, []);
 
   const handleToggle = () => {
-    setOpen(prev => !prev);
+    setOpen((prev) => !prev);
   };
-  const handleClose = e => {
+  const handleClose = (e) => {
     if (anchorRef.current?.contains(e.target)) return;
     setOpen(false);
   };
@@ -110,18 +106,11 @@ export default function ProfileSection() {
           <ClickAwayListener onClickAway={handleClose}>
             <Transitions in={open} {...TransitionProps}>
               <Paper>
-                <MainCard
-                  border={false}
-                  elevation={16}
-                  content={false}
-                  boxShadow={theme.shadows[16]}
-                >
+                <MainCard border={false} elevation={16} content={false} boxShadow={theme.shadows[16]}>
                   <Box sx={{ p: 2, pb: 0 }}>
                     <Box sx={{ mb: 1 }}>
-                      <Typography variant="h4">
-                        Good Morning,
-                      </Typography>
-                        {profile.fullName}
+                      <Typography variant="h4">Good Morning,</Typography>
+                      {profile.fullName}
                     </Box>
                     <Typography variant="subtitle2" color="textSecondary">
                       {profile.role}

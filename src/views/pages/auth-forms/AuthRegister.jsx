@@ -39,20 +39,20 @@ export default function AuthRegister() {
   // show/hide password
   const [showPassword, setShowPassword] = useState(false);
   // form fields
-  const [firstName, setFirstName] = useState('');   // ◀ new
-  const [lastName, setLastName]   = useState('');   // ◀ new
-  const [email, setEmail]         = useState('');
-  const [password, setPassword]   = useState('');
-  const [checked, setChecked]     = useState(true);
+  const [firstName, setFirstName] = useState(''); // ◀ new
+  const [lastName, setLastName] = useState(''); // ◀ new
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [checked, setChecked] = useState(true);
 
   // loading & errors
-  const [isLoading, setLoading]       = useState(false);
+  const [isLoading, setLoading] = useState(false);
   const [errorDialogOpen, setErrorOpen] = useState(false);
-  const [errorMsg, setErrorMsg]       = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Password strength
   const [passwordStrength, setPasswordStrength] = useState(0);
-  
+
   const checkPasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 8) strength += 25;
@@ -103,32 +103,66 @@ export default function AuthRegister() {
       setErrorOpen(true);
       setLoading(false);
     } else {
-
       const userId = data.user.id;
-      const { error: evError } = await supabase
-        .from('ev_sessions')
-        .insert({
-          user_id:     userId,
-          charging_rate: 4,          // kW
-          plug_in_time:  '22:00',
-          plug_out_time: '08:00',
-          initial_soc:    35,        // %
-          final_soc:       5,        // 35%−30%
-          daily_usage:   200         // km/day (example)
-        });
-    
+
+      // Create default EV session
+      const { error: evError } = await supabase.from('ev_sessions').insert({
+        user_id: userId,
+        charging_rate: 4, // kW
+        plug_in_time: '22:00',
+        plug_out_time: '08:00',
+        initial_soc: 35, // %
+        final_soc: 5, // 35%−30%
+        daily_usage: 200 // km/day (example)
+      });
+
       if (evError) {
         console.error('Failed to create default EV session:', evError);
         // you might want to show a warning here, but it shouldn't block signup
       }
-      
+
+      // Create default meteorological data records
+      const meteorologicalData = [
+        {
+          user_id: userId,
+          data_type: 'Wind',
+          duration: 'One Month',
+          data: { average_wind_speed: 7.2 }
+        },
+        {
+          user_id: userId,
+          data_type: 'Solar',
+          duration: 'One Month',
+          data: { average_irradiance: 5.8 }
+        },
+        {
+          user_id: userId,
+          data_type: 'Solar',
+          duration: 'One Year',
+          data: { annual_irradiance: 4.8 }
+        },
+        {
+          user_id: userId,
+          data_type: 'Wind',
+          duration: 'One Year',
+          data: { annual_wind_speed: 6.5 }
+        }
+      ];
+
+      const { error: meteoError } = await supabase.from('meteorological_data').insert(meteorologicalData);
+
+      if (meteoError) {
+        console.error('Failed to create default meteorological data:', meteoError);
+        // you might want to show a warning here, but it shouldn't block signup
+      }
+
       setLoading(false);
       navigate('/login');
     }
   };
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
-  const handleMouseDownPassword  = (e) => e.preventDefault();
+  const handleMouseDownPassword = (e) => e.preventDefault();
 
   if (isLoading) return <Loader />;
 
@@ -137,9 +171,9 @@ export default function AuthRegister() {
       <Stack spacing={3}>
         {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 2 }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
+          <Typography
+            variant="h4"
+            sx={{
               mb: 1,
               background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
               backgroundClip: 'text',
@@ -156,14 +190,14 @@ export default function AuthRegister() {
         </Box>
 
         <Divider>
-          <Chip 
-            label="Sign Up" 
-            size="small" 
-            sx={{ 
+          <Chip
+            label="Sign Up"
+            size="small"
+            sx={{
               background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
               color: 'white',
               fontWeight: 500
-            }} 
+            }}
           />
         </Divider>
 
@@ -179,17 +213,17 @@ export default function AuthRegister() {
                 <InputAdornment position="start">
                   <PersonIcon color="primary" />
                 </InputAdornment>
-              ),
+              )
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
                 '&:hover fieldset': {
-                  borderColor: 'primary.main',
+                  borderColor: 'primary.main'
                 },
                 '&.Mui-focused fieldset': {
-                  borderWidth: 2,
-                },
-              },
+                  borderWidth: 2
+                }
+              }
             }}
           />
           <TextField
@@ -202,17 +236,17 @@ export default function AuthRegister() {
                 <InputAdornment position="start">
                   <PersonIcon color="primary" />
                 </InputAdornment>
-              ),
+              )
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
                 '&:hover fieldset': {
-                  borderColor: 'primary.main',
+                  borderColor: 'primary.main'
                 },
                 '&.Mui-focused fieldset': {
-                  borderWidth: 2,
-                },
-              },
+                  borderWidth: 2
+                }
+              }
             }}
           />
         </Stack>
@@ -229,17 +263,17 @@ export default function AuthRegister() {
               <InputAdornment position="start">
                 <EmailIcon color="primary" />
               </InputAdornment>
-            ),
+            )
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
               '&:hover fieldset': {
-                borderColor: 'primary.main',
+                borderColor: 'primary.main'
               },
               '&.Mui-focused fieldset': {
-                borderWidth: 2,
-              },
-            },
+                borderWidth: 2
+              }
+            }
           }}
         />
 
@@ -259,28 +293,24 @@ export default function AuthRegister() {
               ),
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton
-                    onClick={handleClickShowPassword}
-                    onMouseDown={handleMouseDownPassword}
-                    edge="end"
-                  >
+                  <IconButton onClick={handleClickShowPassword} onMouseDown={handleMouseDownPassword} edge="end">
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
-              ),
+              )
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
                 '&:hover fieldset': {
-                  borderColor: 'primary.main',
+                  borderColor: 'primary.main'
                 },
                 '&.Mui-focused fieldset': {
-                  borderWidth: 2,
-                },
-              },
+                  borderWidth: 2
+                }
+              }
             }}
           />
-          
+
           {/* Password Strength Indicator */}
           {password && (
             <Box sx={{ mt: 1 }}>
@@ -297,7 +327,7 @@ export default function AuthRegister() {
                 sx={{
                   height: 4,
                   borderRadius: 2,
-                  backgroundColor: theme.palette.grey[200],
+                  backgroundColor: theme.palette.grey[200]
                 }}
               />
             </Box>
@@ -312,26 +342,24 @@ export default function AuthRegister() {
               onChange={(e) => setChecked(e.target.checked)}
               sx={{
                 '&.Mui-checked': {
-                  color: 'primary.main',
-                },
+                  color: 'primary.main'
+                }
               }}
             />
           }
           label={
             <Stack direction="row" alignItems="center" spacing={0.5}>
-              <Typography variant="body2">
-                I agree to the
-              </Typography>
-              <Typography 
-                component={Link} 
-                to="#" 
-                variant="body2" 
-                sx={{ 
+              <Typography variant="body2">I agree to the</Typography>
+              <Typography
+                component={Link}
+                to="#"
+                variant="body2"
+                sx={{
                   color: 'primary.main',
                   textDecoration: 'none',
                   fontWeight: 600,
                   '&:hover': {
-                    textDecoration: 'underline',
+                    textDecoration: 'underline'
                   }
                 }}
               >
@@ -361,14 +389,14 @@ export default function AuthRegister() {
               '&:hover': {
                 background: 'linear-gradient(45deg, #1976D2 30%, #1BA3D1 90%)',
                 boxShadow: '0 6px 10px 4px rgba(33, 203, 243, .3)',
-                transform: 'translateY(-1px)',
+                transform: 'translateY(-1px)'
               },
               '&:disabled': {
                 background: theme.palette.grey[300],
-                boxShadow: 'none',
+                boxShadow: 'none'
               },
               position: 'relative',
-              overflow: 'hidden',
+              overflow: 'hidden'
             }}
           >
             {isLoading ? (
@@ -383,8 +411,8 @@ export default function AuthRegister() {
                     animation: 'spin 1s linear infinite',
                     '@keyframes spin': {
                       '0%': { transform: 'rotate(0deg)' },
-                      '100%': { transform: 'rotate(360deg)' },
-                    },
+                      '100%': { transform: 'rotate(360deg)' }
+                    }
                   }}
                 />
                 <Typography>Creating Account...</Typography>
@@ -402,16 +430,16 @@ export default function AuthRegister() {
         <Box sx={{ textAlign: 'center', mt: 2 }}>
           <Typography variant="body2" color="textSecondary">
             Already have an account?{' '}
-            <Typography 
-              component={Link} 
-              to="/login" 
-              variant="body2" 
-              sx={{ 
+            <Typography
+              component={Link}
+              to="/login"
+              variant="body2"
+              sx={{
                 color: 'primary.main',
                 textDecoration: 'none',
                 fontWeight: 600,
                 '&:hover': {
-                  textDecoration: 'underline',
+                  textDecoration: 'underline'
                 }
               }}
             >
@@ -421,11 +449,7 @@ export default function AuthRegister() {
         </Box>
       </Stack>
 
-      <ErrorDialog
-        open={errorDialogOpen}
-        message={errorMsg}
-        onClose={() => setErrorOpen(false)}
-      />
+      <ErrorDialog open={errorDialogOpen} message={errorMsg} onClose={() => setErrorOpen(false)} />
     </>
   );
 }
