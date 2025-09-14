@@ -14,7 +14,12 @@ import {
   OutlinedInput,
   TextField,
   Typography,
-  Box
+  Box,
+  Stack,
+  Divider,
+  Chip,
+  LinearProgress,
+  Alert
 } from '@mui/material';
 import Loader from '../../../ui-component/Loader';
 import AnimateButton from 'ui-component/extended/AnimateButton';
@@ -22,6 +27,11 @@ import ErrorDialog from '../../../ui-component/ErrorDialog';
 import { supabase } from '../../../api/supabaseClient';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import PersonIcon from '@mui/icons-material/Person';
+import EmailIcon from '@mui/icons-material/Email';
+import LockIcon from '@mui/icons-material/Lock';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import SecurityIcon from '@mui/icons-material/Security';
 export default function AuthRegister() {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -39,6 +49,38 @@ export default function AuthRegister() {
   const [isLoading, setLoading]       = useState(false);
   const [errorDialogOpen, setErrorOpen] = useState(false);
   const [errorMsg, setErrorMsg]       = useState('');
+
+  // Password strength
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  
+  const checkPasswordStrength = (password) => {
+    let strength = 0;
+    if (password.length >= 8) strength += 25;
+    if (/[A-Z]/.test(password)) strength += 25;
+    if (/[0-9]/.test(password)) strength += 25;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+    return strength;
+  };
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setPassword(value);
+    setPasswordStrength(checkPasswordStrength(value));
+  };
+
+  const getPasswordStrengthColor = () => {
+    if (passwordStrength < 25) return 'error';
+    if (passwordStrength < 50) return 'warning';
+    if (passwordStrength < 75) return 'info';
+    return 'success';
+  };
+
+  const getPasswordStrengthText = () => {
+    if (passwordStrength < 25) return 'Weak';
+    if (passwordStrength < 50) return 'Fair';
+    if (passwordStrength < 75) return 'Good';
+    return 'Strong';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -92,61 +134,132 @@ export default function AuthRegister() {
 
   return (
     <>
-      <Grid container spacing={2} sx={{ justifyContent: 'center' }}>
-        <Grid item xs={12}>
-          <Typography variant="subtitle1">
-            Sign up with Email address
+      <Stack spacing={3}>
+        {/* Header */}
+        <Box sx={{ textAlign: 'center', mb: 2 }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              mb: 1,
+              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontWeight: 600
+            }}
+          >
+            Create Account
           </Typography>
-        </Grid>
+          <Typography variant="subtitle1" color="textSecondary">
+            Join our energy management platform
+          </Typography>
+        </Box>
 
-        {/* First + Last Name */}
-        <Grid item xs={12} sm={6}>
+        <Divider>
+          <Chip 
+            label="Sign Up" 
+            size="small" 
+            sx={{ 
+              background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
+              color: 'white',
+              fontWeight: 500
+            }} 
+          />
+        </Divider>
+
+        {/* Name Fields */}
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
             fullWidth
             label="First Name"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            sx={{ ...theme.typography.customInput }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon color="primary" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+                '&.Mui-focused fieldset': {
+                  borderWidth: 2,
+                },
+              },
+            }}
           />
-        </Grid>
-        <Grid item xs={12} sm={6}>
           <TextField
             fullWidth
             label="Last Name"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            sx={{ ...theme.typography.customInput }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon color="primary" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+                '&.Mui-focused fieldset': {
+                  borderWidth: 2,
+                },
+              },
+            }}
           />
-        </Grid>
+        </Stack>
 
-        {/* Email */}
-        <Grid item xs={12}>
-          <FormControl fullWidth sx={{ ...theme.typography.customInput }}>
-            <InputLabel htmlFor="outlined-email">Email Address</InputLabel>
-            <OutlinedInput
-              id="outlined-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              label="Email Address"
-            />
-          </FormControl>
-        </Grid>
+        {/* Email Field */}
+        <TextField
+          fullWidth
+          label="Email Address"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <EmailIcon color="primary" />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              '&:hover fieldset': {
+                borderColor: 'primary.main',
+              },
+              '&.Mui-focused fieldset': {
+                borderWidth: 2,
+              },
+            },
+          }}
+        />
 
-        {/* Password */}
-        <Grid item xs={12}>
-          <FormControl fullWidth sx={{ ...theme.typography.customInput }}>
-            <InputLabel htmlFor="outlined-password">Password</InputLabel>
-            <OutlinedInput
-              id="outlined-password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              label="Password"
-              endAdornment={
+        {/* Password Field */}
+        <Box>
+          <TextField
+            fullWidth
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={handlePasswordChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockIcon color="primary" />
+                </InputAdornment>
+              ),
+              endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    size="large"
                     onClick={handleClickShowPassword}
                     onMouseDown={handleMouseDownPassword}
                     edge="end"
@@ -154,50 +267,159 @@ export default function AuthRegister() {
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
-              }
-            />
-          </FormControl>
-        </Grid>
-
-        {/* Terms */}
-        <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={checked}
-                onChange={(e) => setChecked(e.target.checked)}
-                color="primary"
-              />
-            }
-            label={
-              <Typography variant="subtitle1">
-                Agree with&nbsp;
-                <Typography component={Link} to="#" variant="subtitle1">
-                  Terms & Conditions
-                </Typography>
-              </Typography>
-            }
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+                '&.Mui-focused fieldset': {
+                  borderWidth: 2,
+                },
+              },
+            }}
           />
-        </Grid>
+          
+          {/* Password Strength Indicator */}
+          {password && (
+            <Box sx={{ mt: 1 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                <SecurityIcon fontSize="small" color={getPasswordStrengthColor()} />
+                <Typography variant="caption" color={getPasswordStrengthColor() + '.main'}>
+                  Password Strength: {getPasswordStrengthText()}
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={passwordStrength}
+                color={getPasswordStrengthColor()}
+                sx={{
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: theme.palette.grey[200],
+                }}
+              />
+            </Box>
+          )}
+        </Box>
 
-        {/* Submit */}
-        <Grid item xs={12}>
-          <Box sx={{ mt: 2 }}>
-            <AnimateButton>
-              <Button
-                fullWidth
-                size="large"
-                type="submit"
-                variant="contained"
-                color="secondary"
-                onClick={handleSubmit}
+        {/* Terms and Conditions */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={checked}
+              onChange={(e) => setChecked(e.target.checked)}
+              sx={{
+                '&.Mui-checked': {
+                  color: 'primary.main',
+                },
+              }}
+            />
+          }
+          label={
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Typography variant="body2">
+                I agree to the
+              </Typography>
+              <Typography 
+                component={Link} 
+                to="#" 
+                variant="body2" 
+                sx={{ 
+                  color: 'primary.main',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  }
+                }}
               >
-                Sign up
-              </Button>
-            </AnimateButton>
-          </Box>
-        </Grid>
-      </Grid>
+                Terms & Conditions
+              </Typography>
+            </Stack>
+          }
+        />
+
+        {/* Register Button */}
+        <AnimateButton>
+          <Button
+            fullWidth
+            size="large"
+            type="submit"
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={!checked || isLoading}
+            sx={{
+              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+              height: 48,
+              fontWeight: 600,
+              fontSize: '1rem',
+              textTransform: 'none',
+              borderRadius: 2,
+              boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #1976D2 30%, #1BA3D1 90%)',
+                boxShadow: '0 6px 10px 4px rgba(33, 203, 243, .3)',
+                transform: 'translateY(-1px)',
+              },
+              '&:disabled': {
+                background: theme.palette.grey[300],
+                boxShadow: 'none',
+              },
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {isLoading ? (
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box
+                  sx={{
+                    width: 20,
+                    height: 20,
+                    border: '2px solid transparent',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(360deg)' },
+                    },
+                  }}
+                />
+                <Typography>Creating Account...</Typography>
+              </Stack>
+            ) : (
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <CheckCircleIcon />
+                <Typography>Create Account</Typography>
+              </Stack>
+            )}
+          </Button>
+        </AnimateButton>
+
+        {/* Login Link */}
+        <Box sx={{ textAlign: 'center', mt: 2 }}>
+          <Typography variant="body2" color="textSecondary">
+            Already have an account?{' '}
+            <Typography 
+              component={Link} 
+              to="/login" 
+              variant="body2" 
+              sx={{ 
+                color: 'primary.main',
+                textDecoration: 'none',
+                fontWeight: 600,
+                '&:hover': {
+                  textDecoration: 'underline',
+                }
+              }}
+            >
+              Sign In
+            </Typography>
+          </Typography>
+        </Box>
+      </Stack>
 
       <ErrorDialog
         open={errorDialogOpen}

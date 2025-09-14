@@ -4,22 +4,43 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
     Grid, Card, CardContent, Typography, Button,
     Modal, Box, Checkbox, FormControlLabel,
-    CircularProgress, List, ListItem, Divider
+    CircularProgress, List, ListItem, Divider,
+    Paper, Avatar, Stack, Chip, IconButton,
+    Fade, Backdrop, Tooltip
 } from '@mui/material';
+import {
+    Assessment as AssessmentIcon,
+    Visibility as VisibilityIcon,
+    Compare as CompareIcon,
+    PictureAsPdf as PdfIcon,
+    Description as DescriptionIcon,
+    DateRange as DateIcon,
+    Close as CloseIcon,
+    Download as DownloadIcon
+} from '@mui/icons-material';
 import { supabase } from '../../../api/supabaseClient';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import {
     ResponsiveContainer, LineChart, Line,
-    XAxis, YAxis, CartesianGrid, Tooltip, Legend
+    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend
 } from 'recharts';
 import CompareModal from './compareModal';
 
 const modalStyle = {
-    position: 'absolute', top: '50%', left: '50%',
-    transform: 'translate(-50%, -50%)', width: 800,
-    bgcolor: 'background.paper', boxShadow: 24,
-    p: 4, maxHeight: '90vh', overflowY: 'auto'
+    position: 'absolute', 
+    top: '50%', 
+    left: '50%',
+    transform: 'translate(-50%, -50%)', 
+    width: 900,
+    bgcolor: 'background.paper', 
+    boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+    p: 4, 
+    maxHeight: '90vh', 
+    overflowY: 'auto',
+    borderRadius: 3,
+    border: 'none',
+    outline: 'none'
 };
 
 export default function ReportsPage() {
@@ -90,7 +111,20 @@ export default function ReportsPage() {
         pdf.save('compare_report.pdf');
     };
 
-    if (loading) return <CircularProgress />;
+    if (loading) return (
+        <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            minHeight: '50vh',
+            flexDirection: 'column'
+        }}>
+            <CircularProgress size={60} thickness={4} />
+            <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
+                Loading reports...
+            </Typography>
+        </Box>
+    );
 
     return (
         <>

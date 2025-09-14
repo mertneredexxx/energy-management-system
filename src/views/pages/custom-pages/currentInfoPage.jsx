@@ -19,7 +19,28 @@ import {
     DialogContent,
     TextField,
     DialogActions,
+    Box,
+    Chip,
+    Avatar,
+    Stack,
+    Divider,
+    Paper,
+    Tooltip,
+    IconButton,
+    Zoom
 } from '@mui/material';
+import {
+    Power as PowerIcon,
+    SolarPower as SolarIcon,
+    ShowChart as ShowChartIcon,
+    Save as SaveIcon,
+    TrendingUp as TrendingUpIcon,
+    TrendingDown as TrendingDownIcon,
+    BatteryFull as BatteryIcon,
+    ElectricCar as ElectricCarIcon,
+    Home as HomeIcon,
+    Info as InfoIcon
+} from '@mui/icons-material';
 import { supabase } from '../../../api/supabaseClient';
 import {
     ResponsiveContainer,
@@ -28,7 +49,7 @@ import {
     XAxis,
     YAxis,
     CartesianGrid,
-    Tooltip,
+    Tooltip as RechartsTooltip,
     Legend,
     ReferenceLine,
 } from 'recharts';
@@ -201,7 +222,12 @@ export default function InfoPage() {
 
 
     /* ---------- load everything on mount --------------- */
-    useEffect(() => { reload(); }, []);
+    useEffect(() => { 
+        async function loadData() {
+            await reload();
+        }
+        loadData();
+    }, []);
 
     async function reload() {
         setLoading(true);
@@ -569,11 +595,47 @@ export default function InfoPage() {
 
 
 
-    if (loading) return <CircularProgress />;
+    if (loading) return (
+        <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            minHeight: '50vh',
+            flexDirection: 'column'
+        }}>
+            <CircularProgress size={60} thickness={4} />
+            <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
+                Loading energy data...
+            </Typography>
+        </Box>
+    );
 
     return (
-        <>
-            <Grid container spacing={2}>
+        <Box sx={{ p: 3 }}>
+            {/* Header Section */}
+            <Box sx={{ mb: 4 }}>
+                <Typography 
+                    variant="h3" 
+                    component="h1" 
+                    sx={{ 
+                        fontWeight: 700,
+                        color: 'primary.main',
+                        mb: 1,
+                        background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                    }}
+                >
+                    Energy Analysis Dashboard
+                </Typography>
+                <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
+                    Real-time energy consumption and production insights
+                </Typography>
+                <Divider sx={{ mt: 2, width: 60, height: 3, bgcolor: 'primary.main' }} />
+            </Box>
+
+            <Grid container spacing={3}>
                 {/* Tables */}
                 <Grid item xs={12} md={6}>
                     <Card><CardContent>
@@ -732,28 +794,41 @@ export default function InfoPage() {
                     </Card>
                 </Grid>
             </Grid>
-            {preview && (
-                <Grid item xs={12} sx={{ textAlign: 'right', my: 2 }}>
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        onClick={openReportDialog}
-                        disabled={saving}
-                    >
-                        {saving ? 'Saving…' : 'Save Report'}
-                    </Button>
-                </Grid>
-            )}
+
             {/* Save Report Dialog */}
-            <Dialog open={reportModalOpen} onClose={closeReportDialog} maxWidth="sm" fullWidth>
-                <DialogTitle>Save Current Report</DialogTitle>
-                <DialogContent>
+            <Dialog 
+                open={reportModalOpen} 
+                onClose={closeReportDialog} 
+                maxWidth="sm" 
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    fontWeight: 600,
+                    fontSize: '1.5rem'
+                }}>
+                    <SaveIcon sx={{ mr: 2, color: 'primary.main' }} />
+                    Save Current Report
+                </DialogTitle>
+                <DialogContent sx={{ pt: 2 }}>
                     <TextField
                         label="Report Name"
                         fullWidth
                         value={reportName}
                         onChange={e => setReportName(e.target.value)}
-                        sx={{ mt: 2 }}
+                        sx={{ 
+                            mt: 2,
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2
+                            }
+                        }}
                     />
                     <TextField
                         label="Description"
@@ -762,27 +837,50 @@ export default function InfoPage() {
                         rows={3}
                         value={reportDesc}
                         onChange={e => setReportDesc(e.target.value)}
-                        sx={{ mt: 2 }}
+                        sx={{ 
+                            mt: 2,
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2
+                            }
+                        }}
                     />
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={closeReportDialog} disabled={saving}>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button 
+                        onClick={closeReportDialog} 
+                        disabled={saving}
+                        sx={{ 
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 600
+                        }}
+                    >
                         Cancel
                     </Button>
                     <Button
                         variant="contained"
                         onClick={saveReport}
                         disabled={!reportName.trim() || !reportDesc.trim() || saving}
+                        sx={{ 
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                            '&:hover': {
+                                background: 'linear-gradient(45deg, #1565c0, #1976d2)',
+                            }
+                        }}
                     >
                         {saving ? 'Saving…' : 'Save'}
                     </Button>
                 </DialogActions>
             </Dialog>
+
             <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>
-                <Alert severity={snack.sev} variant="filled" sx={{ width: '100%' }}>
+                <Alert severity={snack.sev} variant="filled" sx={{ width: '100%', borderRadius: 2 }}>
                     {snack.msg}
                 </Alert>
             </Snackbar>
-        </>
+        </Box>
     );
 }
